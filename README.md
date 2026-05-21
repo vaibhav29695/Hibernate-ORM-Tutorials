@@ -1,3 +1,180 @@
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import com.epay.payment.constant.PaymentConstants;
+import com.epay.payment.dao.MobikwikWalletPaymentDao;
+import com.epay.payment.dao.PaymentDao;
+import com.epay.payment.dao.StatusUpdatePaymentDao;
+import com.epay.payment.dto.MobikwikWalletDvResponseDto;
+import com.epay.payment.dto.MobikwikWalletMapWebResponseDto;
+import com.epay.payment.util.MobikwikWalletEncryptionDecryptionUtil;
+import com.epay.payment.util.PaymentUtil;
+import com.epay.payment.validator.PaymentValidator;
+import com.epay.payment.config.WalletConfig;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+@ExtendWith(MockitoExtension.class)
+class MobikwikWalletPaymentDaoTest {
+
+    @Mock
+    private PaymentDao paymentDao;
+
+    @Mock
+    private MobikwikWalletEncryptionDecryptionUtil walletEncryptionDecryptionUtil;
+
+    @Mock
+    private PaymentValidator paymentValidator;
+
+    @Mock
+    private StatusUpdatePaymentDao statusUpdatePaymentDao;
+
+    @Mock
+    private WalletConfig walletConfig;
+
+    @Mock
+    private PaymentUtil paymentUtil;
+
+    @InjectMocks
+    private MobikwikWalletPaymentDao mobikwikWalletPaymentDao;
+
+    private MobikwikWalletMapWebResponseDto webResponseDto;
+    private MobikwikWalletDvResponseDto dvResponseDto;
+
+    @BeforeEach
+    void setUp() {
+
+        webResponseDto = new MobikwikWalletMapWebResponseDto();
+        webResponseDto.setMid("MID123");
+        webResponseDto.setOrderid("ORD123");
+
+        dvResponseDto = new MobikwikWalletDvResponseDto();
+        dvResponseDto.setOrderid("ORD123");
+        dvResponseDto.setTxid("TXN123");
+    }
+
+    @Test
+    void testProcessWalletDoubleVerRequest_StringResponse() {
+
+        Mockito.spy(mobikwikWalletPaymentDao);
+
+        String expected = "CALLBACK_RESPONSE";
+
+        when(mobikwikWalletPaymentDao.getCallBackResponse("MID123", "ORD123"))
+                .thenReturn(expected);
+
+        String actual =
+                mobikwikWalletPaymentDao.processWalletDoubleVerRequest(webResponseDto);
+
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    void testGetCallBackResponse() {
+
+        when(walletConfig.getSecretKey()).thenReturn("SECRET_KEY");
+
+        String response =
+                mobikwikWalletPaymentDao.getCallBackResponse("MID123", "ORD123");
+
+        verify(paymentDao).saveRequestLog(
+                anyString(),
+                anyString(),
+                anyString(),
+                anyString());
+
+        assertEquals(response.contains("ORD123"), true);
+    }
+
+    @Test
+    void testProcessWalletDoubleVerRequest_SuccessCase() {
+
+        dvResponseDto.setStatuscode(
+                PaymentConstants.WALLET_STATUS_SUCCESS_CONST);
+
+        MobikwikWalletDvResponseDto response =
+                mobikwikWalletPaymentDao.processWalletDoubleVerRequest(
+                        webResponseDto,
+                        dvResponseDto,
+                        "DECRYPT_RESPONSE");
+
+        verify(paymentDao).saveResponseLog(
+                anyString(),
+                anyString(),
+                anyString(),
+                anyString(),
+                anyString());
+
+        verify(statusUpdatePaymentDao)
+                .paymentSuccessPendingStatusUpdateGen(
+                        anyString(),
+                        anyString(),
+                        anyString(),
+                        anyString());
+
+        assertEquals(
+                PaymentConstants.WALLET_STATUS_SUCCESS_CONST,
+                response.getStatuscode());
+    }
+
+    @Test
+    void testProcessWalletDoubleVerRequest_FailureCase() {
+
+        dvResponseDto.setStatuscode(
+                PaymentConstants.FAILURE_CONST);
+
+        MobikwikWalletDvResponseDto response =
+                mobikwikWalletPaymentDao.processWalletDoubleVerRequest(
+                        webResponseDto,
+                        dvResponseDto,
+                        "DECRYPT_RESPONSE");
+
+        verify(statusUpdatePaymentDao)
+                .paymentFailureStatusUpdate(
+                        anyString(),
+                        anyString(),
+                        anyString(),
+                        anyString());
+
+        assertEquals(
+                PaymentConstants.FAILURE_CONST,
+                response.getStatuscode());
+    }
+
+    @Test
+    void testProcessWalletDoubleVerRequest_DefaultCase() {
+
+        dvResponseDto.setStatuscode("UNKNOWN");
+
+        MobikwikWalletDvResponseDto response =
+                mobikwikWalletPaymentDao.processWalletDoubleVerRequest(
+                        webResponseDto,
+                        dvResponseDto,
+                        "DECRYPT_RESPONSE");
+
+        verify(statusUpdatePaymentDao)
+                .paymentFailureStatusUpdate(
+                        anyString(),
+                        anyString(),
+                        anyString(),
+                        anyString());
+
+        assertEquals("UNKNOWN", response.getStatuscode());
+    }
+}
+
+
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
