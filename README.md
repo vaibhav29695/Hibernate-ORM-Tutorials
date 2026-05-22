@@ -1,3 +1,235 @@
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+import java.math.BigDecimal;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+@ExtendWith(MockitoExtension.class)
+class NbPaymentDaoTest {
+
+    @Mock
+    private PaymentDao paymentDao;
+
+    @Mock
+    private InbEncryptionDecryptionUtil inbEncryptionDecryptionUtil;
+
+    @Mock
+    private PaymentValidator paymentValidator;
+
+    @Mock
+    private StatusUpdatePaymentDao statusUpdatePaymentDao;
+
+    @InjectMocks
+    private NbPaymentDao nbPaymentDao;
+
+    private NbMapWebResponseDto nbMapWebResponseDto;
+    private NbMapWebResponseDto nbMapDVResponseDto;
+
+    @BeforeEach
+    void setUp() {
+
+        nbMapWebResponseDto = new NbMapWebResponseDto();
+        nbMapWebResponseDto.setTxnrefNo("TXN123");
+        nbMapWebResponseDto.setSbirefNo("SBI123");
+        nbMapWebResponseDto.setAmount(new BigDecimal("100"));
+
+        nbMapDVResponseDto = new NbMapWebResponseDto();
+        nbMapDVResponseDto.setTxnrefNo("TXN123");
+        nbMapDVResponseDto.setSbirefNo("SBI123");
+        nbMapDVResponseDto.setAmount(new BigDecimal("100"));
+        nbMapDVResponseDto.setCheckSum("checksum");
+    }
+
+    @Test
+    void testProcessInbDoubleVerRequest_Success() {
+
+        nbMapDVResponseDto.setStatus(PaymentConstants.SUCCESS_CONST);
+
+        when(paymentValidator.checkSumValidation(anyString(), anyString()))
+                .thenReturn(true);
+
+        when(paymentValidator.validateWebAndDvAmt(any(), any()))
+                .thenReturn(true);
+
+        when(paymentValidator.validateBankReferenceNumber(anyString(), anyString()))
+                .thenReturn(true);
+
+        NbMapWebResponseDto response =
+                nbPaymentDao.processNbDoubleVerRequest(
+                        nbMapWebResponseDto,
+                        nbMapDVResponseDto,
+                        "encryptedResponse");
+
+        assertNotNull(response);
+
+        verify(statusUpdatePaymentDao, times(1))
+                .paymentSuccessPendingStatusUpdate(
+                        eq(PaymentStatus.SUCCESS),
+                        anyString(),
+                        anyString(),
+                        any());
+    }
+
+    @Test
+    void testProcessInbDoubleVerRequest_Pending() {
+
+        nbMapDVResponseDto.setStatus(PaymentConstants.PENDING_CONST);
+
+        when(paymentValidator.checkSumValidation(anyString(), anyString()))
+                .thenReturn(true);
+
+        when(paymentValidator.validateWebAndDvAmt(any(), any()))
+                .thenReturn(true);
+
+        when(paymentValidator.validateBankReferenceNumber(anyString(), anyString()))
+                .thenReturn(true);
+
+        NbMapWebResponseDto response =
+                nbPaymentDao.processNbDoubleVerRequest(
+                        nbMapWebResponseDto,
+                        nbMapDVResponseDto,
+                        "encryptedResponse");
+
+        assertNotNull(response);
+
+        verify(statusUpdatePaymentDao, times(1))
+                .paymentSuccessPendingStatusUpdate(
+                        eq(PaymentStatus.PENDING),
+                        anyString(),
+                        anyString(),
+                        any());
+    }
+
+    @Test
+    void testProcessInbDoubleVerRequest_Failure() {
+
+        nbMapDVResponseDto.setStatus(PaymentConstants.FAILURE_CONST);
+
+        when(paymentValidator.checkSumValidation(anyString(), anyString()))
+                .thenReturn(true);
+
+        when(paymentValidator.validateWebAndDvAmt(any(), any()))
+                .thenReturn(true);
+
+        when(paymentValidator.validateBankReferenceNumber(anyString(), anyString()))
+                .thenReturn(true);
+
+        NbMapWebResponseDto response =
+                nbPaymentDao.processNbDoubleVerRequest(
+                        nbMapWebResponseDto,
+                        nbMapDVResponseDto,
+                        "encryptedResponse");
+
+        assertNotNull(response);
+
+        verify(statusUpdatePaymentDao, times(1))
+                .paymentFailureStatusUpdate(
+                        anyString(),
+                        anyString(),
+                        anyString(),
+                        any());
+    }
+
+    @Test
+    void testProcessInbDoubleVerRequest_DefaultCase() {
+
+        nbMapDVResponseDto.setStatus("UNKNOWN");
+
+        when(paymentValidator.checkSumValidation(anyString(), anyString()))
+                .thenReturn(true);
+
+        when(paymentValidator.validateWebAndDvAmt(any(), any()))
+                .thenReturn(true);
+
+        when(paymentValidator.validateBankReferenceNumber(anyString(), anyString()))
+                .thenReturn(true);
+
+        NbMapWebResponseDto response =
+                nbPaymentDao.processNbDoubleVerRequest(
+                        nbMapWebResponseDto,
+                        nbMapDVResponseDto,
+                        "encryptedResponse");
+
+        assertNotNull(response);
+
+        verify(statusUpdatePaymentDao, times(1))
+                .paymentFailureStatusUpdate(
+                        anyString(),
+                        anyString(),
+                        anyString(),
+                        any());
+    }
+
+    @Test
+    void testValidateCallBackResponse_ChecksumFail() {
+
+        when(paymentValidator.checkSumValidation(anyString(), anyString()))
+                .thenReturn(false);
+
+        assertThrows(
+                PaymentException.class,
+                () -> nbPaymentDao.processNbDoubleVerRequest(
+                        nbMapWebResponseDto,
+                        nbMapDVResponseDto,
+                        "encryptedResponse"));
+    }
+
+    @Test
+    void testValidateCallBackResponse_AmountMismatch() {
+
+        when(paymentValidator.checkSumValidation(anyString(), anyString()))
+                .thenReturn(true);
+
+        when(paymentValidator.validateWebAndDvAmt(any(), any()))
+                .thenReturn(false);
+
+        assertThrows(
+                PaymentException.class,
+                () -> nbPaymentDao.processNbDoubleVerRequest(
+                        nbMapWebResponseDto,
+                        nbMapDVResponseDto,
+                        "encryptedResponse"));
+    }
+
+    @Test
+    void testValidateCallBackResponse_BankRefMismatch() {
+
+        when(paymentValidator.checkSumValidation(anyString(), anyString()))
+                .thenReturn(true);
+
+        when(paymentValidator.validateWebAndDvAmt(any(), any()))
+                .thenReturn(true);
+
+        when(paymentValidator.validateBankReferenceNumber(anyString(), anyString()))
+                .thenReturn(false);
+
+        assertThrows(
+                PaymentException.class,
+                () -> nbPaymentDao.processNbDoubleVerRequest(
+                        nbMapWebResponseDto,
+                        nbMapDVResponseDto,
+                        "encryptedResponse"));
+    }
+
+    @Test
+    void testProcessInbDoubleVerRequest_StringResponse() {
+
+        String response =
+                nbPaymentDao.processInbDoubleVerRequest(nbMapWebResponseDto);
+
+        assertNotNull(response);
+    }
+}
+
+
+
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyString;
