@@ -1,3 +1,24 @@
+@Test
+void testProcessInbDoubleVerRequest_StringResponse() {
+
+    NbMapWebResponseDto nbMapWebResponseDto = new NbMapWebResponseDto();
+    NbMapDVResponseDto nbMapDVResponseDto = new NbMapDVResponseDto();
+
+    NbMapWebResponseDto response =
+            nbPaymentDao.processInbDoubleVerRequest(
+                    nbMapWebResponseDto,
+                    nbMapDVResponseDto,
+                    "encryptedResponse");
+
+    assertNotNull(response);
+}
+
+
+
+
+
+
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
