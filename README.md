@@ -1,3 +1,233 @@
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.lang.reflect.Method;
+import java.util.UUID;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+@ExtendWith(MockitoExtension.class)
+class NotificationDaoTest {
+
+    @InjectMocks
+    private NotificationDao notificationDao;
+
+    @Mock
+    private NotificationMapper notificationMapper;
+
+    @Mock
+    private NotificationManagementRepository notificationManagementRepository;
+
+    @Mock
+    private SmsNotificationProducer smsNotificationProducer;
+
+    @Mock
+    private EmailNotificationProducer emailNotificationProducer;
+
+    @Mock
+    private EmailService emailService;
+
+    @Mock
+    private CashChallanConfigDetails cashChallanConfigDetails;
+
+    @Mock
+    private SmsService smsService;
+
+    @BeforeEach
+    void setUp() {
+    }
+
+    @Test
+    void testPublishSmsNotification() {
+
+        CashSmsDto cashSmsDto = new CashSmsDto();
+        cashSmsDto.setRequestType("SMS");
+
+        String routingKey = "sms-routing";
+
+        notificationDao.publishSmsNotification(cashSmsDto, routingKey);
+
+        verify(smsNotificationProducer)
+                .publish(cashSmsDto.getRequestType(), routingKey, cashSmsDto);
+    }
+
+    @Test
+    void testSendSmsNotification() {
+
+        CashSmsDto cashSmsDto = new CashSmsDto();
+
+        SmsDto smsDto = new SmsDto();
+
+        when(notificationMapper.mapSmsDtoToToDto(any(CashSmsDto.class)))
+                .thenReturn(smsDto);
+
+        assertDoesNotThrow(() ->
+                notificationDao.sendSmsNotification(cashSmsDto));
+
+        verify(notificationMapper)
+                .mapSmsDtoToToDto(cashSmsDto);
+
+        verify(smsService)
+                .sendSMS(smsDto);
+    }
+
+    @Test
+    void testSendSMS_Exception() throws Exception {
+
+        SmsDto smsDto = new SmsDto();
+
+        doThrow(new RuntimeException("SMS Exception"))
+                .when(smsService)
+                .sendSMS(any(SmsDto.class));
+
+        Method method = NotificationDao.class
+                .getDeclaredMethod("sendSMS", SmsDto.class);
+
+        method.setAccessible(true);
+
+        method.invoke(notificationDao, smsDto);
+
+        // verify service called
+        verify(smsService).sendSMS(smsDto);
+    }
+
+    @Test
+    void testBuildNotificationManagement_ForSms() throws Exception {
+
+        CashSmsDto cashSmsDto = new CashSmsDto();
+
+        cashSmsDto.setRequestType("SMS");
+
+        UUID entityId = UUID.randomUUID();
+        cashSmsDto.setEntityId(entityId);
+
+        Method method = NotificationDao.class
+                .getDeclaredMethod("buildNotificationManagement",
+                        CashSmsDto.class);
+
+        method.setAccessible(true);
+
+        NotificationManagement result =
+                (NotificationManagement) method.invoke(notificationDao,
+                        cashSmsDto);
+
+        assertEquals("SMS", result.getRequestType());
+        assertEquals(entityId, result.getEntityId());
+    }
+
+    @Test
+    void testPublishEmailNotification() {
+
+        CashEmailDto cashEmailDto = new CashEmailDto();
+
+        cashEmailDto.setRequestType("EMAIL");
+
+        UUID entityId = UUID.randomUUID();
+
+        String routingKey = "email-routing";
+
+        notificationDao.publishEmailNotification(
+                cashEmailDto,
+                routingKey,
+                entityId
+        );
+
+        verify(emailNotificationProducer)
+                .publish(
+                        cashEmailDto.getRequestType(),
+                        routingKey,
+                        cashEmailDto
+                );
+    }
+
+    @Test
+    void testGetEmailDto_WhenRecipientPresent() throws Exception {
+
+        CashEmailDto cashEmailDto = new CashEmailDto();
+
+        UUID userId = UUID.randomUUID();
+
+        when(cashChallanConfigDetails.getFrom())
+                .thenReturn("test@gmail.com");
+
+        when(cashChallanConfigDetails.getRecipient())
+                .thenReturn("receiver@gmail.com");
+
+        Method method = NotificationDao.class
+                .getDeclaredMethod(
+                        "getEmailDto",
+                        CashEmailDto.class,
+                        UUID.class
+                );
+
+        method.setAccessible(true);
+
+        method.invoke(notificationDao, cashEmailDto, userId);
+
+        assertEquals("test@gmail.com", cashEmailDto.getFrom());
+        assertEquals(userId, cashEmailDto.getEntityId());
+        assertEquals("receiver@gmail.com", cashEmailDto.getRecipient());
+    }
+
+    @Test
+    void testSendEmailNotification() {
+
+        CashEmailDto cashEmailDto = new CashEmailDto();
+
+        EmailDto emailDto = new EmailDto();
+
+        when(notificationMapper.mapEmailDtoToDto(any(CashEmailDto.class)))
+                .thenReturn(emailDto);
+
+        assertDoesNotThrow(() ->
+                notificationDao.sendEmailNotification(cashEmailDto));
+
+        verify(notificationMapper)
+                .mapEmailDtoToDto(cashEmailDto);
+
+        verify(emailService)
+                .sendEmail(emailDto);
+    }
+
+    @Test
+    void testSendEmail_Exception() throws Exception {
+
+        EmailDto emailDto = new EmailDto();
+
+        doThrow(new RuntimeException("Email Exception"))
+                .when(emailService)
+                .sendEmail(any(EmailDto.class));
+
+        Method method = NotificationDao.class
+                .getDeclaredMethod("sendEmail", EmailDto.class);
+
+        method.setAccessible(true);
+
+        method.invoke(notificationDao, emailDto);
+
+        verify(emailService).sendEmail(emailDto);
+    }
+}
+
+
+
+
+
+
+
+
+
 @Test
 void testProcessInbDoubleVerRequest_StringResponse() {
 
