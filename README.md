@@ -1,3 +1,207 @@
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.nio.charset.StandardCharsets;
+import java.sql.Timestamp;
+import java.util.UUID;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+@ExtendWith(MockitoExtension.class)
+class OfflinePaymentDaoTest {
+
+    @Mock
+    private OfflinePaymentRepository offlinePaymentRepository;
+
+    @Mock
+    private CashManagementMapper mapper;
+
+    @InjectMocks
+    private OfflinePaymentDao offlinePaymentDao;
+
+    @Mock
+    private TransactionDto transactionDto;
+
+    @Mock
+    private PlainCashChallanJsonRequest plainCashChallanJsonRequest;
+
+    @Mock
+    private CashChallanPaymentFinalResponseDto cashChallanPaymentFinalResponseDto;
+
+    @Mock
+    private NeftPaymentFinalResponseDto neftPaymentFinalResponseDto;
+
+    @Mock
+    private CashManagementDto cashManagementDto;
+
+    private UUID reportManagementId;
+
+    @BeforeEach
+    void setUp() {
+
+        reportManagementId = UUID.randomUUID();
+
+        when(transactionDto.getMerchantId()).thenReturn(1001L);
+        when(transactionDto.getAtrnNum()).thenReturn("ATRN12345");
+        when(transactionDto.getPayMode()).thenReturn("CASH");
+
+        when(plainCashChallanJsonRequest.getNameOfTheCustomer())
+                .thenReturn("Vaibhav");
+
+        when(plainCashChallanJsonRequest.getMobileNumber())
+                .thenReturn("9876543210");
+
+        when(plainCashChallanJsonRequest.getEmailId())
+                .thenReturn("test@gmail.com");
+
+        when(plainCashChallanJsonRequest.getChallanGenerationDateAndTime())
+                .thenReturn(new Timestamp(System.currentTimeMillis()));
+
+        when(plainCashChallanJsonRequest.getChallanExpiryOn())
+                .thenReturn(new Timestamp(System.currentTimeMillis()));
+
+        when(cashManagementDto.getAtrnNum())
+                .thenReturn("ATRN12345");
+    }
+
+    @Test
+    void testSaveCashPdfDetails() {
+
+        assertDoesNotThrow(() ->
+                offlinePaymentDao.saveCashPdfDetails(
+                        reportManagementId,
+                        ReportStatus.SUCCESS,
+                        transactionDto,
+                        cashChallanPaymentFinalResponseDto,
+                        plainCashChallanJsonRequest
+                ));
+
+        verify(offlinePaymentRepository, times(1))
+                .save(any(OfflinePaymentModeDetailsEntity.class));
+
+        verify(mapper, times(1))
+                .mapEntityToDto(any(OfflinePaymentModeDetailsEntity.class));
+    }
+
+    @Test
+    void testFindByAtrnNum() {
+
+        OfflinePaymentModeDetailsEntity entity =
+                new OfflinePaymentModeDetailsEntity();
+
+        CashManagementDto dto = new CashManagementDto();
+
+        when(offlinePaymentRepository.findByAtrnNum("ATRN12345"))
+                .thenReturn(entity);
+
+        when(mapper.mapEntityToDto(entity))
+                .thenReturn(dto);
+
+        offlinePaymentDao.findByAtrnNum("ATRN12345");
+
+        verify(offlinePaymentRepository, times(1))
+                .findByAtrnNum("ATRN12345");
+
+        verify(mapper, times(1))
+                .mapEntityToDto(entity);
+    }
+
+    @Test
+    void testUpdateCashPdfDetails() {
+
+        OfflinePaymentModeDetailsEntity entity =
+                new OfflinePaymentModeDetailsEntity();
+
+        when(offlinePaymentRepository.findByAtrnNum("ATRN12345"))
+                .thenReturn(entity);
+
+        assertDoesNotThrow(() ->
+                offlinePaymentDao.updateCashPdfDetails(
+                        "test.pdf",
+                        cashManagementDto
+                ));
+
+        verify(offlinePaymentRepository, times(1))
+                .save(entity);
+    }
+
+    @Test
+    void testUpdateCashPdfBlobDetails() {
+
+        OfflinePaymentModeDetailsEntity entity =
+                new OfflinePaymentModeDetailsEntity();
+
+        when(offlinePaymentRepository.findByAtrnNum("ATRN12345"))
+                .thenReturn(entity);
+
+        assertDoesNotThrow(() ->
+                offlinePaymentDao.updateCashPdfBlobDetails(
+                        "BASE64DATA",
+                        cashManagementDto,
+                        "test.pdf"
+                ));
+
+        verify(offlinePaymentRepository, times(1))
+                .save(entity);
+    }
+
+    @Test
+    void testUpdateCashPdfBlobData() {
+
+        OfflinePaymentModeDetailsEntity entity =
+                new OfflinePaymentModeDetailsEntity();
+
+        byte[] fileData = "PDF_DATA".getBytes(StandardCharsets.UTF_8);
+
+        when(offlinePaymentRepository.findByAtrnNum("ATRN12345"))
+                .thenReturn(entity);
+
+        assertDoesNotThrow(() ->
+                offlinePaymentDao.updateCashPdfBlobData(
+                        fileData,
+                        cashManagementDto,
+                        "test.pdf"
+                ));
+
+        verify(offlinePaymentRepository, times(1))
+                .save(entity);
+    }
+
+    @Test
+    void testSaveNeftPdfDetails() {
+
+        assertDoesNotThrow(() ->
+                offlinePaymentDao.saveNeftPdfDetails(
+                        reportManagementId,
+                        ReportStatus.SUCCESS,
+                        transactionDto,
+                        neftPaymentFinalResponseDto,
+                        plainCashChallanJsonRequest
+                ));
+
+        verify(offlinePaymentRepository, times(1))
+                .save(any(OfflinePaymentModeDetailsEntity.class));
+
+        verify(mapper, times(1))
+                .mapEntityToDto(any(OfflinePaymentModeDetailsEntity.class));
+    }
+}
+
+
+
+
+
+
+
+
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
