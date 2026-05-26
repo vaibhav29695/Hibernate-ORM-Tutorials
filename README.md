@@ -1,3 +1,96 @@
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import java.text.MessageFormat;
+import java.util.Optional;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+@ExtendWith(MockitoExtension.class)
+class OrderDaoTest {
+
+    @Mock
+    private OrderRepository orderRepository;
+
+    @InjectMocks
+    private OrderDao orderDao;
+
+    private TransactionDto transactionDto;
+    private Order order;
+
+    @BeforeEach
+    void setUp() {
+
+        transactionDto = new TransactionDto();
+        transactionDto.setSbiOrderRefNumber("SBI123");
+        transactionDto.setOrderRefNumber("ORD123");
+
+        order = new Order();
+    }
+
+    @Test
+    void testGetOrderDetails_Success() {
+
+        when(orderRepository
+                .findBySbiOrderRefNumberAndOrderRefNumber(
+                        transactionDto.getSbiOrderRefNumber(),
+                        transactionDto.getOrderRefNumber()))
+                .thenReturn(Optional.of(order));
+
+        Order result = orderDao.getOrderDetails(transactionDto);
+
+        assertNotNull(result);
+        assertEquals(order, result);
+
+        verify(orderRepository, times(1))
+                .findBySbiOrderRefNumberAndOrderRefNumber(
+                        transactionDto.getSbiOrderRefNumber(),
+                        transactionDto.getOrderRefNumber());
+    }
+
+    @Test
+    void testGetOrderDetails_OrderNotFound() {
+
+        when(orderRepository
+                .findBySbiOrderRefNumberAndOrderRefNumber(
+                        transactionDto.getSbiOrderRefNumber(),
+                        transactionDto.getOrderRefNumber()))
+                .thenReturn(Optional.empty());
+
+        PaymentException exception = assertThrows(
+                PaymentException.class,
+                () -> orderDao.getOrderDetails(transactionDto));
+
+        assertEquals(
+                ErrorConstants.NOT_FOUND_ERROR_CODE,
+                exception.getErrorCode());
+
+        assertEquals(
+                MessageFormat.format(
+                        ErrorConstants.NOT_FOUND_ERROR_MESSAGE,
+                        "Order"),
+                exception.getMessage());
+
+        verify(orderRepository, times(1))
+                .findBySbiOrderRefNumberAndOrderRefNumber(
+                        transactionDto.getSbiOrderRefNumber(),
+                        transactionDto.getOrderRefNumber());
+    }
+}
+
+
+
+
+
+
+
+
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
