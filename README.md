@@ -1,5 +1,35 @@
 private BigDecimal calculateGstAmount(
         MerchantPricingResponse pricingStructure,
+        MerchantPricingRequest request,
+        MerchantPricingDto pricingDto) {
+
+    // DOM transaction <= 2000 => No GST
+    if ("DOM".equalsIgnoreCase(pricingStructure.getPayProcType())
+            && request.getPostAmount()
+                      .compareTo(BigDecimal.valueOf(2000)) <= 0) {
+
+        return BigDecimal.ZERO;
+    }
+
+    BigDecimal aggFee = pricingDto.getAggServiceFeeAb();
+
+    if (aggFee == null) {
+        return BigDecimal.ZERO;
+    }
+
+    // GST = 18%
+    return aggFee.multiply(BigDecimal.valueOf(18))
+                 .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+}
+
+
+
+
+
+
+
+private BigDecimal calculateGstAmount(
+        MerchantPricingResponse pricingStructure,
         MerchantPricingDto pricingDto) {
 
     if (pricingStructure.getServiceTax() == null) {
