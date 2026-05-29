@@ -1,5 +1,40 @@
 private BigDecimal calculateGstAmount(
         MerchantPricingResponse pricingStructure,
+        MerchantPricingDto pricingDto) {
+
+    if (pricingStructure.getServiceTax() == null) {
+        return BigDecimal.ZERO;
+    }
+
+    if (pricingDto.getAggServiceFeeAb() == null) {
+        return BigDecimal.ZERO;
+    }
+
+    // Percentage GST
+    if ("P".equalsIgnoreCase(pricingStructure.getServiceTaxType())) {
+
+        return pricingDto.getAggServiceFeeAb()
+                .multiply(pricingStructure.getServiceTax())
+                .divide(BigDecimal.valueOf(100),
+                        2,
+                        RoundingMode.HALF_UP);
+    }
+
+    // Flat GST
+    if ("F".equalsIgnoreCase(pricingStructure.getServiceTaxType())) {
+        return pricingStructure.getServiceTax();
+    }
+
+    return BigDecimal.ZERO;
+}
+
+
+
+
+
+
+private BigDecimal calculateGstAmount(
+        MerchantPricingResponse pricingStructure,
         MerchantPricingDto dto) {
 
     if (pricingStructure.getServiceTax() == null) {
