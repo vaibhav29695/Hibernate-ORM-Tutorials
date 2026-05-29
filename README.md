@@ -1,3 +1,28 @@
+
+MerchantPricingDto merchantPricingDto =
+        calculateFee(pricingStructure,
+                     merchantPricingRequest);
+
+BigDecimal gstAmount =
+        calculateGST(
+                pricingStructure,
+                merchantPricingDto);
+
+merchantPricingDto.setGstAmount(gstAmount);
+
+checkAtrnAndSavePricingInfo(
+        merchantPricingRequest,
+        merchantPricingDto,
+        pricingStructure);
+
+return buildMerchantFeeResponse(
+        merchantPricingRequest,
+        merchantPricingDto);
+
+
+
+
+
 private BigDecimal calculateGST(
         MerchantPricingResponse pricingStructure,
         MerchantPricingDto pricingDto) {
