@@ -1,3 +1,29 @@
+private BigDecimal calculateGST(
+        MerchantPricingResponse pricingStructure,
+        MerchantPricingDto pricingDto) {
+
+    if (pricingStructure.getServiceTax() == null) {
+        return BigDecimal.ZERO;
+    }
+
+    if (pricingDto.getAggServiceFeeAb() == null) {
+        return BigDecimal.ZERO;
+    }
+
+    return pricingDto.getAggServiceFeeAb()
+            .multiply(pricingStructure.getServiceTax())
+            .divide(BigDecimal.valueOf(100),
+                    2,
+                    RoundingMode.HALF_UP);
+}
+
+
+
+
+
+
+
+
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
