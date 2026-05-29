@@ -1,3 +1,30 @@
+private BigDecimal calculateGstAmount(
+        MerchantPricingResponse pricingStructure,
+        MerchantPricingDto dto) {
+
+    if (pricingStructure.getServiceTax() == null) {
+        return BigDecimal.ZERO;
+    }
+
+    if (dto.getAggServiceFeeAb() == null) {
+        return BigDecimal.ZERO;
+    }
+
+    if ("P".equalsIgnoreCase(
+            pricingStructure.getServiceTaxType())) {
+
+        return dto.getAggServiceFeeAb()
+                .multiply(pricingStructure.getServiceTax())
+                .divide(BigDecimal.valueOf(100),
+                        2,
+                        RoundingMode.HALF_UP);
+    }
+
+    return pricingStructure.getServiceTax();
+}
+
+
+
 
 MerchantPricingDto merchantPricingDto =
         calculateFee(pricingStructure,
