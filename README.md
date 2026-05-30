@@ -1,3 +1,15 @@
+
+https://teams.microsoft.com/l/chat/19:meeting_YTA2NzEwNmEtZWY5Ni00Mzc4LWFhNzAtMDRhNGJmYzZiZDBi@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D
+
+
+
+
+
+
+
+
+
+
 private BigDecimal calculateGstAmount(
         MerchantPricingResponse pricingStructure,
         MerchantPricingRequest request,
