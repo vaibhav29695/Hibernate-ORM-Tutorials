@@ -1,3 +1,78 @@
+
+RU=https://epay.sbi.bank.in/payagg/...
+
+https://billing.mahadiscom.in/sbiSuccessHandler.php
+
+Request Body:
+{
+  "bankId": "013",
+  "pid": "000002227446",
+  "itc": "MSEDCL LT Post Paid Bill M-App",
+  "prn": "5292093528637",
+  "amt": "18110.00",
+  "crn": "INR"
+} 
+
+# Checksum generated
+
+# Customer Redirect to-
+https://epay.sbi.bank.in/payagg/...
+
+# customer Select -
+Bank Of India Net Banking
+
+# SBIePay sends response-
+
+{ PAID=Y
+ AMT=18110
+ PRN=5292093528637} 
+ 
+ # Double Verification response 
+
+ # Checksum Validation
+
+ # Update Transaction Table
+
+ # Response Received
+
+
+
+Customer
+   |
+   |
+Merchant Application
+   |
+Generate ATRN
+Generate Checksum
+   |
+   V
+SBIePay Gateway
+   |
+Select BOI Net Banking
+   |
+Customer Pays
+   |
+   V
+SBIePay Response
+   |
+Validate Checksum
+   |
+Double Verification API
+   |
+Update DB
+   |
+Success Callback URL
+   |
+Merchant Response
+
+
+
+
+
+
+
+
+========================>
 String response = """
 {
   "status": 1,
