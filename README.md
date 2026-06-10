@@ -1,3 +1,53 @@
+String response = """
+{
+  "status": 1,
+  "data": [
+    {
+      "mId": 1000003,
+      "payModeCode": "DC",
+      "gtwMapsId": 228,
+      "payProcType": "ONUS",
+      "merchantFee": 0,
+      "instructionType": "I",
+      "slabFrom": 0,
+      "slabTo": 999999999999,
+      "merchantFeeApplicable": "Y",
+      "merchantFeeType": "F",
+      "otherFeeApplicable": "N",
+      "otherFeeType": "F",
+      "otherFee": 0,
+      "gtwFeeApplicable": "N",
+      "gtwFeeType": "F",
+      "gtwFee": 0,
+      "aggServiceFeeApplicable": "N",
+      "aggServiceFeeType": "F",
+      "aggServiceFee": 0,
+      "feeProcessingFlag": "H",
+      "serviceTax": 18,
+      "serviceTaxType": "P",
+      "serviceTaxId": 1,
+      "txnApplicable": "Y",
+      "transactionType": "ORDER",
+      "bearableComponent": "FEE",
+      "bearableEntity": "C",
+      "bearableAmountCutoff": 0,
+      "bearableFlatRate": 0.1,
+      "bearableLimit": "NA",
+      "bearablePercentageRate": 0,
+      "bearableType": "F",
+      "totalFeeRate": 0.1,
+      "processFlag": "N"
+    }
+  ],
+  "count": null,
+  "total": null,
+  "errors": null
+}
+""";
+
+
+
+
 
 https://teams.microsoft.com/l/chat/19:meeting_YTA2NzEwNmEtZWY5Ni00Mzc4LWFhNzAtMDRhNGJmYzZiZDBi@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D
 
