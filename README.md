@@ -1,4 +1,17 @@
 
+public static final String PAY_PROC_TYPE_DOM = "DOM";
+
+public static final String PAY_MODE_CC = "CC";
+public static final String PAY_MODE_DC = "DC";
+public static final String PAY_MODE_PC = "PC";
+public static final String PAY_MODE_SCC = "SCC";
+
+public static final BigDecimal GST_EXEMPT_AMOUNT =
+        BigDecimal.valueOf(2000);
+
+
+
+
 RU=https://epay.sbi.bank.in/payagg/...
 
 https://billing.mahadiscom.in/sbiSuccessHandler.php
