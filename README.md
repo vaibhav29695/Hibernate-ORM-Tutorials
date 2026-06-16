@@ -1,4 +1,318 @@
+@ExtendWith(MockitoExtension.class)
+class AdminDaoTest {
 
+    @InjectMocks
+    private AdminDao adminDao;
+
+    @Mock
+    private AdminServicesClient adminServicesClient;
+
+    @Mock
+    private ErrorLogDao errorLogDao;
+
+    @Mock
+    private PricingMapper pricingMapper;
+}
+
+@Test
+void getMerchantByMId_success() {
+
+    String mId = "100001";
+
+    MerchantInfoResponse merchantInfo = new MerchantInfoResponse();
+
+    TransactionResponse<MerchantInfoResponse> response =
+            new TransactionResponse<>();
+
+    response.setStatus(TransactionConstant.RESPONSE_SUCCESS);
+    response.setData(List.of(merchantInfo));
+
+    when(adminServicesClient.getMerchantInfoByMid(mId))
+            .thenReturn(response);
+
+    MerchantInfoResponse result =
+            adminDao.getMerchantByMId(mId);
+
+    assertNotNull(result);
+    assertEquals(merchantInfo, result);
+}
+@Test
+void getMerchantByMId_shouldThrowTransactionException_whenErrorsExist() {
+
+    String mId = "100001";
+
+    ErrorResponse error = new ErrorResponse();
+
+    TransactionResponse<MerchantInfoResponse> response =
+            new TransactionResponse<>();
+
+    response.setErrors(List.of(error));
+
+    when(adminServicesClient.getMerchantInfoByMid(mId))
+            .thenReturn(response);
+
+    assertThrows(
+            TransactionException.class,
+            () -> adminDao.getMerchantByMId(mId));
+}
+
+@Test
+void getMerchantRFCDetails_success() {
+
+    String mId = "100001";
+
+    MerchantRfcResponse rfcResponse =
+            new MerchantRfcResponse();
+
+    TransactionResponse<MerchantRfcResponse> response =
+            new TransactionResponse<>();
+
+    response.setStatus(TransactionConstant.RESPONSE_SUCCESS);
+    response.setData(List.of(rfcResponse));
+
+    when(adminServicesClient.getMerchantRFCInfo(mId))
+            .thenReturn(response);
+
+    MerchantRfcResponse result =
+            adminDao.getMerchantRFCDetails(mId);
+
+    assertEquals(rfcResponse, result);
+}
+
+@Test
+void getMerchantRFCDetails_shouldThrowTransactionException() {
+
+    TransactionResponse<MerchantRfcResponse> response =
+            new TransactionResponse<>();
+
+    response.setErrors(List.of(new ErrorResponse()));
+
+    when(adminServicesClient.getMerchantRFCInfo(anyString()))
+            .thenReturn(response);
+
+    assertThrows(TransactionException.class,
+            () -> adminDao.getMerchantRFCDetails("100001"));
+}
+
+@Test
+void getMerchantMultiAccount_success() {
+
+    TransactionResponse<String> response =
+            new TransactionResponse<>();
+
+    response.setStatus(TransactionConstant.RESPONSE_SUCCESS);
+    response.setData(List.of("ACC1", "ACC2"));
+
+    when(adminServicesClient.getMultiAccountDetailsApi("100001"))
+            .thenReturn(response);
+
+    List<String> result =
+            adminDao.getMerchantMultiAccount("100001");
+
+    assertEquals(2, result.size());
+}
+@Test
+void getMerchantMultiAccount_notFound() {
+
+    TransactionResponse<String> response =
+            new TransactionResponse<>();
+
+    when(adminServicesClient.getMultiAccountDetailsApi(anyString()))
+            .thenReturn(response);
+
+    assertThrows(TransactionException.class,
+            () -> adminDao.getMerchantMultiAccount("100001"));
+}
+@Test
+void getMerchantPayModes_success() {
+
+    ObjectMapper mapper = new ObjectMapper();
+
+    ObjectNode root = mapper.createObjectNode();
+    ArrayNode payModes = mapper.createArrayNode();
+
+    payModes.add("CC");
+    payModes.add("DC");
+
+    root.set("payModes", payModes);
+
+    TransactionResponse<JsonNode> response =
+            new TransactionResponse<>();
+
+    response.setStatus(TransactionConstant.RESPONSE_SUCCESS);
+    response.setData(List.of(root));
+
+    when(adminServicesClient.getMerchantPayModeInfo("100001"))
+            .thenReturn(response);
+
+    JsonNode result =
+            adminDao.getMerchantPayModes("100001");
+
+    assertEquals(2, result.size());
+}
+@Test
+void getMerchantVVLDetails_success() {
+
+    MerchantVvlResponse vvl = new MerchantVvlResponse();
+
+    TransactionResponse<MerchantVvlResponse> response =
+            new TransactionResponse<>();
+
+    response.setStatus(TransactionConstant.RESPONSE_SUCCESS);
+    response.setData(List.of(vvl));
+
+    when(adminServicesClient.getVvlDetails("100001"))
+            .thenReturn(response);
+
+    List<MerchantVvlResponse> result =
+            adminDao.getMerchantVVLDetails("100001");
+
+    assertEquals(1, result.size());
+}
+@Test
+void getGatewayConfigDetails_success() {
+
+    GatewayConfigDetailsResponse config =
+            new GatewayConfigDetailsResponse();
+
+    TransactionResponse<GatewayConfigDetailsResponse> response =
+            new TransactionResponse<>();
+
+    response.setStatus(TransactionConstant.RESPONSE_SUCCESS);
+    response.setData(List.of(config));
+
+    when(adminServicesClient.getGatewayConfigDetails(
+            anyString(),
+            anyString(),
+            anyString()))
+            .thenReturn(response);
+
+    GatewayConfigDetailsResponse result =
+            adminDao.getGatewayConfigDetails(
+                    "100001",
+                    "228",
+                    "DC");
+
+    assertEquals(config, result);
+}
+
+@Test
+void isValidCurrencyCode_success() {
+
+    TransactionResponse<?> response =
+            new TransactionResponse<>();
+
+    response.setStatus(TransactionConstant.RESPONSE_SUCCESS);
+
+    when(adminServicesClient.getCurrencyValidate(any()))
+            .thenReturn(response);
+
+    assertTrue(
+            adminDao.isValidCurrencyCode("100001", "INR"));
+}
+@Test
+void isValidCurrencyCode_failure() {
+
+    TransactionResponse<?> response =
+            new TransactionResponse<>();
+
+    response.setStatus(TransactionConstant.RESPONSE_FAILURE);
+
+    when(adminServicesClient.getCurrencyValidate(any()))
+            .thenReturn(response);
+
+    assertFalse(
+            adminDao.isValidCurrencyCode("100001", "INR"));
+}
+@Test
+void isValidChannelBank_success() {
+
+    TransactionResponse<?> response =
+            new TransactionResponse<>();
+
+    response.setStatus(TransactionConstant.RESPONSE_SUCCESS);
+
+    when(adminServicesClient.getChannelBankValidate(
+            anyString(),
+            anyString()))
+            .thenReturn(response);
+
+    assertTrue(
+            adminDao.isValidChannelBank("228", "HDFC"));
+}
+
+@Test
+void isValidChannelBank_failure() {
+
+    TransactionResponse<?> response =
+            new TransactionResponse<>();
+
+    response.setStatus(TransactionConstant.RESPONSE_FAILURE);
+
+    when(adminServicesClient.getChannelBankValidate(
+            anyString(),
+            anyString()))
+            .thenReturn(response);
+
+    assertFalse(
+            adminDao.isValidChannelBank("228", "HDFC"));
+}
+
+@Test
+void getValidMerchantPricingStructure_success() {
+
+    MerchantPricingRequest request =
+            new MerchantPricingRequest();
+
+    MerchantPricingResponse pricingResponse =
+            new MerchantPricingResponse();
+
+    pricingResponse.setFeeProcessingFlag("Y");
+    pricingResponse.setBearableComponent("F");
+
+    MerchantPricingResponse result =
+            adminDao.getValidMerchantPricingStructure(request);
+
+    assertNotNull(result);
+}
+@Test
+void getValidMerchantPricingStructure_invalidFeeProcessingFlag() {
+
+    MerchantPricingRequest request =
+            new MerchantPricingRequest();
+
+    ValidationException ex =
+            assertThrows(
+                    ValidationException.class,
+                    () -> adminDao.getValidMerchantPricingStructure(request));
+
+    assertNotNull(ex);
+}
+@Test
+void getValidMerchantPricingStructure_invalidBearableComponent() {
+
+    MerchantPricingRequest request =
+            new MerchantPricingRequest();
+
+    assertThrows(
+            ValidationException.class,
+            () -> adminDao.getValidMerchantPricingStructure(request));
+}
+@Test
+void getValidMerchantPricingStructure_responseErrors() {
+
+    MerchantPricingRequest request =
+            new MerchantPricingRequest();
+
+    assertThrows(
+            TransactionException.class,
+            () -> adminDao.getValidMerchantPricingStructure(request));
+}
+
+
+
+
+======
 public static final String PAY_PROC_TYPE_DOM = "DOM";
 
 public static final String PAY_MODE_CC = "CC";
