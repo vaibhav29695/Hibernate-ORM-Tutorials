@@ -1,3 +1,15 @@
+
+MerchantPricingRequest request = new MerchantPricingRequest();
+request.setMId("TEST_MID");
+request.setTransactionAmount(new BigDecimal("100.00"));
+request.setPayModeCode("UPI");
+request.setGtwMapsId(1L);
+request.setPayProcType("SALE");
+request.setAtrn("123456");
+request.setPostAmount(new BigDecimal("100.00"));
+
+
+
 @ExtendWith(MockitoExtension.class)
 class AdminDaoTest {
 
