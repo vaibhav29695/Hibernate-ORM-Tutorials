@@ -1,3 +1,58 @@
+DOCUMENT MANAGEMENT INFORMATION
+
+Document Title:
+NON-COLLECTION OF GST AMOUNT FROM CUSTOMER FOR INTL CARD TRANSACTIONS
+
+Document Number:
+GIITC/ePay&PG/SBIePay/NON-COLLECTION OF GST AMOUNT FROM CUSTOMER FOR INTL CARD TRANSACTIONS
+
+Document Status:
+
+Version Number:
+1.0
+
+Release Date:
+
+------------------------------------------------------------
+Revision Details
+------------------------------------------------------------
+
+Version No. : 1.0
+Date        : 08-04-2026
+Particulars : Initial Document
+Approved By :
+
+------------------------------------------------------------
+Document Contact Details
+------------------------------------------------------------
+
+Role        : Author
+Name        : Bhagyashri Tikone
+Designation : Developer
+
+Role        : Author
+Name        : Shital Patil
+Designation : Technical Lead
+
+Role        : Reviewer
+Name        : Santosh Kumar Sahoo
+Designation : Solution Architect
+
+Role        : Approver
+Name        : Anand Sharma
+Designation : Project Manager
+
+Role        : Approver
+Name        :
+Designation : BU Team Head
+
+Role        : Custodian
+
+Distribution List:
+
+
+
+
 
 MerchantPricingRequest request = new MerchantPricingRequest();
 request.setMId("TEST_MID");
