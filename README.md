@@ -1,4 +1,78 @@
 
+
+private long countExcelRecords(MultipartFile file) throws IOException {
+
+    if (file == null || file.isEmpty()) {
+        return 0;
+    }
+
+    String fileName = file.getOriginalFilename();
+
+    if (fileName == null || fileName.isBlank()) {
+        throw new IOException("Uploaded file name is empty");
+    }
+
+    System.out.println("File Name     : " + fileName);
+    System.out.println("File Size     : " + file.getSize());
+    System.out.println("Content Type  : " + file.getContentType());
+
+    long count = 0;
+
+    try (InputStream inputStream = file.getInputStream();
+         Workbook workbook = WorkbookFactory.create(inputStream)) {
+
+        System.out.println("Workbook created successfully");
+
+        if (workbook.getNumberOfSheets() == 0) {
+            throw new IOException("Excel file does not contain any sheet");
+        }
+
+        Sheet sheet = workbook.getSheetAt(0);
+
+        System.out.println("Sheet Name    : " + sheet.getSheetName());
+        System.out.println("Last Row Num  : " + sheet.getLastRowNum());
+
+        // Row 0 = Header
+        for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+
+            Row row = sheet.getRow(i);
+
+            if (row == null) {
+                continue;
+            }
+
+            // Column A = Sr No
+            Cell srNoCell = row.getCell(0);
+
+            if (srNoCell == null) {
+                continue;
+            }
+
+            // If Sr No cell is blank, skip
+            String srNo = new DataFormatter().formatCellValue(srNoCell);
+
+            if (srNo == null || srNo.trim().isEmpty()) {
+                continue;
+            }
+
+            count++;
+        }
+
+    } catch (Exception e) {
+
+        System.err.println("Excel reading failed");
+        System.err.println("File Name : " + fileName);
+        e.printStackTrace();
+
+        throw e;
+    }
+
+    System.out.println("Excel Record Count : " + count);
+
+    return count;
+}
+
+****
 package com.epay.admin.portal.service.admin;
 
 import java.io.BufferedReader;
