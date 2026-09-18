@@ -1,4 +1,340 @@
-DOCUMENT MANAGEMENT INFORMATION
+
+package com.epay.admin.portal.service.admin;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.Locale;
+import java.util.stream.Stream;
+
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.epay.admin.portal.dto.admin.ChargebackUploadResponse;
+import com.epay.admin.portal.dto.admin.ExcelParser;
+
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+public class AggCBRFFileUploadService {
+
+    private final S3Service s3Service;
+
+    private final ExcelParser excelParser;
+
+    /*
+     * Local folder where uploaded files will be saved
+     */
+    private final Path uploadDirectory =
+            Paths.get("D:/chargeback/uploads");
+
+
+    /**
+     * Main file processing method
+     */
+    public ChargebackUploadResponse processFile(
+            String cardIssuer,
+            String cbStage,
+            MultipartFile file) throws IOException {
+
+        /*
+         * Validate file
+         */
+        if (file == null || file.isEmpty()) {
+
+            return ChargebackUploadResponse.builder()
+                    .fileName(file != null
+                            ? file.getOriginalFilename()
+                            : null)
+                    .uploadUsername("Username")
+                    .status("FAILED")
+                    .reason("File is empty")
+                    .build();
+        }
+
+        String fileName = file.getOriginalFilename();
+
+        if (fileName == null || fileName.isBlank()) {
+
+            return ChargebackUploadResponse.builder()
+                    .fileName(null)
+                    .uploadUsername("Username")
+                    .status("FAILED")
+                    .reason("File name is missing")
+                    .build();
+        }
+
+
+        /*
+         * Validate extension
+         */
+        String lowerFileName =
+                fileName.toLowerCase(Locale.ROOT);
+
+        boolean validFile =
+                lowerFileName.endsWith(".xls")
+                || lowerFileName.endsWith(".xlsx")
+                || lowerFileName.endsWith(".csv")
+                || lowerFileName.endsWith(".txt");
+
+        if (!validFile) {
+
+            return ChargebackUploadResponse.builder()
+                    .fileName(fileName)
+                    .uploadUsername("Username")
+                    .status("FAILED")
+                    .reason("Invalid file format")
+                    .build();
+        }
+
+
+        /*
+         * Save file locally
+         */
+        String savedFilePath = saveFile(file);
+
+
+        /*
+         * Count valid records
+         */
+        long count = countRecords(file);
+
+
+        /*
+         * Upload to S3
+         *
+         * Keep this according to your existing S3Service
+         */
+        String s3Key =
+                s3Service.uploadMultipartFile(file);
+
+
+        /*
+         * Prepare response
+         */
+        String statusupd;
+        String rsn;
+
+        if (count > 0) {
+
+            statusupd = "UPLOADED";
+            rsn = "File Upload Successfully";
+
+        } else {
+
+            statusupd = "FAILED";
+            rsn = "File format incorrect";
+        }
+
+
+        /*
+         * Return response DTO
+         */
+        return ChargebackUploadResponse.builder()
+                .fileName(fileName)
+                .uploadUsername("Username")
+                .path(s3Key)
+                .status(statusupd)
+                .reason(rsn)
+                .build();
+    }
+
+
+    /**
+     * Decide whether CSV/TXT or Excel
+     */
+    private long countRecords(MultipartFile file)
+            throws IOException {
+
+        if (file == null || file.isEmpty()) {
+            return 0;
+        }
+
+        String fileName =
+                file.getOriginalFilename();
+
+        if (fileName == null) {
+            return 0;
+        }
+
+        fileName =
+                fileName.toLowerCase(Locale.ROOT);
+
+
+        /*
+         * CSV / TXT
+         */
+        if (fileName.endsWith(".csv")
+                || fileName.endsWith(".txt")) {
+
+            return countCsvRecords(file);
+        }
+
+
+        /*
+         * Excel
+         */
+        if (fileName.endsWith(".xls")
+                || fileName.endsWith(".xlsx")) {
+
+            return countExcelRecords(file);
+        }
+
+
+        return 0;
+    }
+
+
+    /**
+     * Count Excel records using ExcelParser
+     *
+     * ExcelParser already skips row 0 (header)
+     */
+    private long countExcelRecords(MultipartFile file)
+            throws IOException {
+
+        if (file == null || file.isEmpty()) {
+            return 0;
+        }
+
+        String fileName =
+                file.getOriginalFilename();
+
+        /*
+         * Use your ExcelParser here
+         */
+        List<String[]> rows =
+                excelParser.parseFile(
+                        file.getInputStream(),
+                        fileName
+                );
+
+        return rows.size();
+    }
+
+
+    /**
+     * Count CSV/TXT records
+     *
+     * First line = Header
+     */
+    private long countCsvRecords(MultipartFile file)
+            throws IOException {
+
+        if (file == null || file.isEmpty()) {
+            return 0;
+        }
+
+        try (
+                InputStream inputStream =
+                        file.getInputStream();
+
+                BufferedReader reader =
+                        new BufferedReader(
+                                new InputStreamReader(
+                                        inputStream,
+                                        StandardCharsets.UTF_8
+                                )
+                        )
+        ) {
+
+            /*
+             * Read header
+             */
+            reader.readLine();
+
+            /*
+             * Count non-empty records
+             */
+            long count = 0;
+
+            String line;
+
+            while ((line = reader.readLine()) != null) {
+
+                if (!line.trim().isEmpty()) {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+    }
+
+
+    /**
+     * Save uploaded file to local folder
+     */
+    private String saveFile(MultipartFile file)
+            throws IOException {
+
+        /*
+         * Create folder if it doesn't exist
+         */
+        Files.createDirectories(uploadDirectory);
+
+
+        /*
+         * Get original file name
+         */
+        String originalFileName =
+                file.getOriginalFilename();
+
+        if (originalFileName == null
+                || originalFileName.isBlank()) {
+
+            throw new IOException(
+                    "File name is missing"
+            );
+        }
+
+
+        /*
+         * Remove unsafe path
+         *
+         * Example:
+         * ../../test.xlsx
+         *
+         * becomes:
+         * test.xlsx
+         */
+        String fileName =
+                Paths.get(originalFileName)
+                        .getFileName()
+                        .toString();
+
+
+        /*
+         * Create target path
+         */
+        Path targetFile =
+                uploadDirectory.resolve(fileName);
+
+
+        /*
+         * Save file
+         */
+        file.transferTo(targetFile.toFile());
+
+
+        return targetFile.toString();
+    }
+}
+
+
+*******
+
+
+
+
+
 
 Document Title:
 NON-COLLECTION OF GST AMOUNT FROM CUSTOMER FOR INTL CARD TRANSACTIONS
