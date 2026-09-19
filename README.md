@@ -1,3 +1,39 @@
+mplementation('org.apache.poi:poi-ooxml:5.4.1')
+//////////////////
+package com.epay.admin.portal.dto.admin;
+
+import com.epay.admin.portal.entity.AuditEntityByDate;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Table;
+import lombok.*;
+
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import java.util.UUID;
+
+
+@EqualsAndHashCode(callSuper = true)
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@Table
+@Entity
+public class ChargebackUploadResponse extends AuditEntityByDate {
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+    private String fileName;
+    private String uploadUsername;
+    private String path;
+    private String remarks;
+    private String status;
+    private String recordsCount;
+    private String reason;
+}
+
+///////////////////////////
 package com.epay.admin.portal.service.admin;
 
 
