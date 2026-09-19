@@ -1,4 +1,320 @@
-mplementation('org.apache.poi:poi-ooxml:5.4.1')
+
+package com.epay.admin.portal.externalservice;
+
+import com.epay.admin.portal.config.S3Config;
+import com.epay.admin.portal.exceptions.AdminPortalException;
+import com.epay.admin.portal.externalservice.response.simulator.RBIMalwareDownloadResponse;
+import com.epay.admin.portal.util.AdminPortalUtil;
+import com.epay.admin.portal.util.ErrorConstants;
+import com.sbi.epay.logging.utility.LoggerFactoryUtility;
+import com.sbi.epay.logging.utility.LoggerUtility;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.ObjectUtils;
+import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.*;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.text.MessageFormat;
+import java.util.ArrayList;
+import java.util.List;
+
+import static com.epay.admin.portal.util.AdminPortalConstants.S3_FILE_NAME_FORMAT;
+
+/**
+ * Class Name: S3Service
+ * Description: The S3Service class provides functionalities to interact with AWS S3 for uploading, downloading, and listing files.
+ * It supports uploading files as a File, byte array, or MultipartFile, and handles the S3 client operations like put, get, and list objects.
+ * It also provides error handling, logging, and custom exception throwing in case of S3 operation failures.
+ * Author: V1017794 - Hariom Kumar
+ * Copyright (c) 2025 [State Bank of India]
+ * All rights reserved
+ * Version: 1.0
+ */
+
+@Service
+@Primary
+@RequiredArgsConstructor
+public class S3Service implements FileService {
+    private final LoggerUtility log = LoggerFactoryUtility.getLogger(this.getClass());
+    private final S3Config s3Config;
+    private final S3Client s3Client;
+
+    /**
+     * Uploads a file to S3 using a File object.
+     *
+     * @param file the file to be uploaded
+     * @return the S3 key for the uploaded file
+     */
+    @Override
+    public String uploadFile(File file) {
+        String key = System.currentTimeMillis() + "-" + file.getName();
+        try {
+            log.info("Uploading file to S3: {}", key);
+            PutObjectRequest objectRequest = PutObjectRequest.builder().bucket(s3Config.getBucket()).key(file.getName()).build();
+            s3Client.putObject(objectRequest, RequestBody.fromFile(file));
+            log.info("File uploaded successfully: {}", key);
+            return key;
+        } catch (S3Exception e) {
+            log.error(ErrorConstants.S3_UPLOAD_FAILED, key, e.getMessage());
+            throw new AdminPortalException(ErrorConstants.GENERIC_ERROR_CODE, MessageFormat.format(ErrorConstants.S3_UPLOAD_FAILED, key, e.getMessage()));
+        }
+    }
+
+    public String uploadMultipartFile(MultipartFile multipartFile) {
+
+        String key = System.currentTimeMillis()
+                + "_" + multipartFile.getOriginalFilename();
+
+        try {
+
+            log.info("Uploading file to S3: {}", key);
+
+            PutObjectRequest objectRequest =
+                    PutObjectRequest.builder()
+                            .bucket(s3Config.getBucket())
+                            .key(key)
+                            .build();
+
+//            s3Client.putObject(
+//                    objectRequest,
+//                    RequestBody.fromInputStream(multipartFile.getInputStream(),multipartFile.getSize())
+//            );
+
+            log.info("File uploaded successfully to S3: {}", key);
+
+            return key;
+
+        } catch (Exception e) {
+
+            log.error("S3 upload failed: {}", e.getMessage(), e);
+
+            throw new AdminPortalException(
+                    ErrorConstants.GENERIC_ERROR_CODE,
+                    MessageFormat.format(
+                            ErrorConstants.S3_UPLOAD_FAILED,
+                            key
+                    )
+            );
+        }
+    }
+
+
+    /**
+     * Uploads a file to S3 using byte array content.
+     *
+     * @param mifId              mifId of the document
+     * @param documentType       documentType of the file
+     * @param rbiMalwareResponse RBIMalwareDownloadResponse - the file content as a byte array and file content type
+     * @return the S3 key for the uploaded file
+     */
+    @Override
+    public String uploadFile(String mifId, String documentType, RBIMalwareDownloadResponse rbiMalwareResponse) {
+        String extension = getExtensionFromMime(rbiMalwareResponse.getContentType());
+        String key = String.format(S3_FILE_NAME_FORMAT, mifId, documentType, System.currentTimeMillis(), extension);
+        try {
+            log.info("Uploading byte array file to S3: {}", key);
+            PutObjectRequest objectRequest = PutObjectRequest.builder().bucket(s3Config.getBucket()).key(key).build();
+            s3Client.putObject(objectRequest, RequestBody.fromBytes(rbiMalwareResponse.getFileContent()));
+            log.info("File uploaded successfully: {}", key);
+            return key;
+        } catch (S3Exception e) {
+            log.error(ErrorConstants.S3_UPLOAD_FAILED, key, e.getMessage());
+            throw new AdminPortalException(ErrorConstants.GENERIC_ERROR_CODE, MessageFormat.format(ErrorConstants.S3_UPLOAD_FAILED, key, e.getMessage()));
+        }
+    }
+
+    /**
+     * Uploads a file to S3 using a MultipartFile.
+     *
+     * @param file the MultipartFile to upload
+     * @return the S3 key for the uploaded file
+     */
+    @Override
+    public String uploadFile(MultipartFile file) {
+        String key = System.currentTimeMillis() + "-" + file.getName();
+        try {
+            log.info("Uploading MultipartFile to S3: {}", key);
+            PutObjectRequest objectRequest = PutObjectRequest.builder().bucket(s3Config.getBucket()).key(key).contentType(file.getContentType()).contentLength(file.getSize()).build();
+            PutObjectResponse putObjectResponse = s3Client.putObject(objectRequest, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
+            log.info("File uploaded successfully: {}", key);
+            return key;
+        } catch (S3Exception | IOException e) {
+            log.error(ErrorConstants.S3_UPLOAD_FAILED, key, e.getMessage());
+            throw new AdminPortalException(ErrorConstants.GENERIC_ERROR_CODE, e.getMessage());
+        }
+    }
+
+    /**
+     * Downloads a file from S3 and writes it to the provided HttpServletResponse.
+     *
+     * @param response the HTTP response object where the file will be written
+     * @param fileName the name of the file to be downloaded
+     */
+
+    @Override
+    public void downloadFile(HttpServletResponse response, String fileName) {
+        try {
+            log.info("Downloading file from S3: {}", fileName);
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder().bucket(s3Config.getBucket()).key(fileName).build();
+            ResponseInputStream<GetObjectResponse> object = s3Client.getObject(getObjectRequest);
+            AdminPortalUtil.setHeader(response, fileName, object.response().contentLength());
+            try (InputStream in = object; OutputStream out = response.getOutputStream()) {
+                in.transferTo(out);
+                out.flush();
+            }
+            log.info("File downloaded successfully: {}", fileName);
+        } catch (S3Exception | IOException e) {
+            log.error(ErrorConstants.S3_UPLOAD_FAILED, fileName, e.getMessage());
+            Object[] messageArgs = {fileName};
+            throw new AdminPortalException(ErrorConstants.NOT_FOUND_ERROR_CODE, MessageFormat.format(ErrorConstants.NOT_FOUND_ERROR_MESSAGE, messageArgs));
+        }
+    }
+
+    /**
+     * Lists all files stored in the S3 bucket.
+     *
+     * @return a list of file keys present in the bucket
+     */
+    @Override
+    public List<String> listObjects() {
+        List<String> fileList = new ArrayList<>();
+        try {
+            log.info("Fetching list of files from S3 bucket...");
+            ListObjectsV2Request listObjectsV2Request = ListObjectsV2Request.builder().bucket(s3Config.getBucket()).build();
+            log.info("s3Client : {}", s3Client);
+            log.info("listObjectsV2Request :{}", listObjectsV2Request);
+            ListObjectsV2Response listObjectsV2Response = s3Client.listObjectsV2(listObjectsV2Request);
+
+            listObjectsV2Response.contents().forEach(s3Object -> {
+                log.info("Found file: {}", s3Object.key());
+                fileList.add(s3Object.toString());
+            });
+        } catch (S3Exception e) {
+            log.error("Failed to list objects in S3 bucket: {}", e.getMessage());
+            throw new AdminPortalException(ErrorConstants.GENERIC_ERROR_CODE, e.getMessage());
+        }
+        return fileList;
+    }
+
+
+    /**
+     * Reads file content from S3 and returns it as a ResponseBytes object.
+     *
+     * @param key the S3 file key
+     * @return file content as ResponseBytes
+     */
+    @Override
+    public InputStream readFile(String key) {
+        try {
+            log.info("Reading file from S3: {}", key);
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder().bucket(s3Config.getBucket()).key(key).build();
+            return s3Client.getObjectAsBytes(getObjectRequest).asInputStream();
+
+        } catch (S3Exception e) {
+            log.error(ErrorConstants.S3_UPLOAD_FAILED, key, e.getMessage());
+            throw new AdminPortalException(ErrorConstants.GENERIC_ERROR_CODE, e.getMessage());
+        }
+    }
+
+    /**
+     * Extract extension from Sandbox file content type and returns it as a string.
+     *
+     * @param mimeType sandbox file content type
+     * @return file extension
+     */
+    public static String getExtensionFromMime(String mimeType) {
+        if(ObjectUtils.isEmpty(mimeType) || !mimeType.contains("/")) {
+            return null;
+        }
+        return mimeType.substring(mimeType.lastIndexOf("/") + 1).toLowerCase();
+    }
+}
+
+
+////////
+
+package com.epay.admin.portal.controller;
+
+
+import com.epay.admin.portal.dto.admin.ChargebackUploadResponse;
+import com.epay.admin.portal.externalservice.S3Service;
+import com.epay.admin.portal.service.admin.AggCBRFileUploadService;
+import com.sbi.epay.logging.utility.LoggerFactoryUtility;
+import com.sbi.epay.logging.utility.LoggerUtility;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.Locale;
+
+@RestController
+@RequestMapping("/chargeback")
+public class AggCBRFileUploadController {
+
+
+    private final AggCBRFileUploadService chargebackService;
+    private final LoggerUtility logger = LoggerFactoryUtility.getLogger(this.getClass());
+
+
+    public AggCBRFileUploadController(AggCBRFileUploadService chargebackService) {
+        this.chargebackService = chargebackService;
+    }
+
+    /**
+     * Upload Chargeback Excel / CSV file
+     */
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ChargebackUploadResponse> uploadChargebackFile(@RequestParam(value = "cardIssuer", required = false) String cardIssuer, @RequestParam(value = "cbStage", required = false) String cbStage, @RequestPart(value = "file", required = false) MultipartFile file) throws IOException {
+        final S3Service s3Service;
+        if (cardIssuer == null || cardIssuer.trim().isEmpty()) {
+            logger.info("cbStage is required.");
+        }
+
+        if (cbStage == null || cbStage.trim().isEmpty()) {
+            logger.info("cbStage is required.");
+        }
+
+        if (file == null || file.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+        if (!isValidFileExtension(file.getOriginalFilename())) {
+            logger.info("Only .txt files are allowed");
+
+            ChargebackUploadResponse errorresponse = ChargebackUploadResponse.builder().fileName(file.getOriginalFilename()).status("FAILED").recordsCount(String.valueOf("0")).reason("Only .csv / .xls , / .xlsx files are allowed").build();
+
+            return ResponseEntity.badRequest().body(errorresponse);
+        }
+
+
+        ChargebackUploadResponse response = chargebackService.processFile(cardIssuer.trim(), cbStage.trim(), file);
+
+        return ResponseEntity.ok(response);
+    }
+
+    private boolean isValidFileExtension(String fileName) {
+
+        String lowerCaseFileName = fileName.toLowerCase(Locale.ROOT);
+        // return lowerCaseFileName.endsWith(".txt");
+        return lowerCaseFileName.endsWith(".xlsx") || lowerCaseFileName.endsWith(".xls") || lowerCaseFileName.endsWith(".csv") || lowerCaseFileName.endsWith(".txt");
+    }
+
+}
+
+
+
+/////mplementation('org.apache.poi:poi-ooxml:5.4.1')
 //////////////////
 package com.epay.admin.portal.dto.admin;
 
