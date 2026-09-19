@@ -1,5 +1,206 @@
+package com.epay.admin.portal.service.admin;
 
 
+import com.epay.admin.portal.dto.admin.ChargebackUploadResponse;
+import com.epay.admin.portal.externalservice.S3Service;
+import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.*;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Locale;
+
+@Service
+@RequiredArgsConstructor
+public class AggCBRFileUploadService {
+    private final S3Service s3Service;
+    private final Path uploadDirectory = Paths.get("D:/chargeback/uploads");
+
+    public ChargebackUploadResponse processFile(String cardIssuer, String cbStage, MultipartFile file) throws IOException {
+
+        // Upload file to S3 using the unique upload number
+        String s3Key = s3Service.uploadMultipartFile(file);
+        String statusupd = "";
+        String rsn = "";
+      //  String savedFilePath = saveFile(file);
+        long count = countRecords(file);
+        if (count > 0) {
+            statusupd = "UPLOADED";
+            rsn = "File Upload Successfully";
+        } else {
+            statusupd = "FAILED";
+            rsn = "file format incorrect";
+        }
+        return ChargebackUploadResponse.builder().fileName(file.getOriginalFilename()).uploadUsername("Username").path(s3Key).status(statusupd).remarks("remarks").reason(rsn).recordsCount(String.valueOf(count)).reason(rsn).build();
+    }
+
+    private long countExcelRecords(MultipartFile file) throws IOException {
+        if (file == null || file.isEmpty()) {
+            return 0;
+        }
+
+        String fileName = file.getOriginalFilename();
+
+        if (fileName == null || fileName.isBlank()) {
+            throw new IOException("Uploaded file name is empty");
+        }
+
+        System.out.println("File Name     : " + fileName);
+        System.out.println("File Size     : " + file.getSize());
+        System.out.println("Content Type  : " + file.getContentType());
+
+        long count = 0;
+
+        try (InputStream inputStream = file.getInputStream();
+             Workbook workbook = WorkbookFactory.create(inputStream)) {
+
+            System.out.println("Workbook created successfully");
+
+            if (workbook.getNumberOfSheets() == 0) {
+                throw new IOException("Excel file does not contain any sheet");
+            }
+
+            Sheet sheet = workbook.getSheetAt(0);
+
+            System.out.println("Sheet Name    : " + sheet.getSheetName());
+            System.out.println("Last Row Num  : " + sheet.getLastRowNum());
+
+            // Row 0 = Header
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+
+                Row row = sheet.getRow(i);
+
+                if (row == null) {
+                    continue;
+                }
+
+                // Column A = Sr No
+                Cell srNoCell = row.getCell(0);
+
+                if (srNoCell == null) {
+                    continue;
+                }
+
+                // If Sr No cell is blank, skip
+                String srNo = new DataFormatter().formatCellValue(srNoCell);
+
+                if (srNo == null || srNo.trim().isEmpty()) {
+                    continue;
+                }
+
+                count++;
+            }
+
+        } catch (Exception e) {
+
+            System.err.println("Excel reading failed");
+            System.err.println("File Name : " + fileName);
+            e.printStackTrace();
+
+            throw e;
+        }
+
+        System.out.println("Excel Record Count : " + count);
+
+        return count;
+    }
+
+    private long countCsvRecords(MultipartFile file) throws IOException {
+        if (file == null || file.isEmpty()) {
+            return 0;
+        }
+        byte[] fileBytes = file.getBytes();
+        try (InputStream inputStream = new ByteArrayInputStream(fileBytes);
+
+             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+
+            return reader.lines().skip(1).filter(line -> !line.trim().isEmpty()).count();
+
+        }
+
+    }
+
+    private long countRecords(MultipartFile file) throws IOException {
+
+        String fileName = file.getOriginalFilename();
+
+        if (fileName == null) {
+            return 0;
+        }
+        fileName = fileName.toLowerCase(Locale.ROOT);
+
+        if (fileName.endsWith(".csv") || fileName.endsWith(".txt")) {
+            return countCsvRecords(file);
+        }
+
+        if (fileName.endsWith(".xls") || fileName.endsWith(".xlsx")) {
+            return countExcelRecords(file);
+        }
+        return 0;
+    }
+
+    private String saveFile(MultipartFile file) throws IOException {
+        // create folder
+        Files.createDirectories(uploadDirectory);
+        String originalFileName = file.getOriginalFilename();
+
+        if (originalFileName == null || originalFileName.isBlank()) {
+            throw new IOException("File name is missing");
+        }
+        //Remove unsafe path
+        String filename = Paths.get(originalFileName).getFileName().toString();
+        Path targetFile = uploadDirectory.resolve(filename);
+
+        //Save file
+
+      // file.transferTo(targetFile.toFile());
+        return targetFile.toString();
+    }
+}
+//////////
+ @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ChargebackUploadResponse> uploadChargebackFile(@RequestParam(value = "cardIssuer", required = false) String cardIssuer, @RequestParam(value = "cbStage", required = false) String cbStage, @RequestPart(value = "file", required = false) MultipartFile file) throws IOException {
+        final S3Service s3Service;
+        if (cardIssuer == null || cardIssuer.trim().isEmpty()) {
+            logger.info("cbStage is required.");
+        }
+
+        if (cbStage == null || cbStage.trim().isEmpty()) {
+            logger.info("cbStage is required.");
+        }
+
+        if (file == null || file.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+        if (!isValidFileExtension(file.getOriginalFilename())) {
+            logger.info("Only .txt files are allowed");
+
+            ChargebackUploadResponse errorresponse = ChargebackUploadResponse.builder().fileName(file.getOriginalFilename()).status("FAILED").recordsCount(String.valueOf("0")).reason("Only .csv / .xls , / .xlsx files are allowed").build();
+
+            return ResponseEntity.badRequest().body(errorresponse);
+        }
+
+
+        ChargebackUploadResponse response = chargebackService.processFile(cardIssuer.trim(), cbStage.trim(), file);
+
+        return ResponseEntity.ok(response);
+    }
+
+    private boolean isValidFileExtension(String fileName) {
+
+        String lowerCaseFileName = fileName.toLowerCase(Locale.ROOT);
+        // return lowerCaseFileName.endsWith(".txt");
+        return lowerCaseFileName.endsWith(".xlsx") || lowerCaseFileName.endsWith(".xls") || lowerCaseFileName.endsWith(".csv") || lowerCaseFileName.endsWith(".txt");
+    }
+
+
+
+////////////
 private long countExcelRecords(MultipartFile file) throws IOException {
 
     if (file == null || file.isEmpty()) {
