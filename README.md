@@ -1,3 +1,16 @@
+CREATE TABLE chargeback_upload_response (
+    id VARCHAR(36) NOT NULL,
+    file_name VARCHAR(255),
+    upload_username VARCHAR(100),
+    path VARCHAR(500),
+    remarks VARCHAR(500),
+    status VARCHAR(50),
+    records_count VARCHAR(50),
+    reason VARCHAR(500),
+
+    PRIMARY KEY (id)
+);
+
 =====
 package com.epay.admin.portal.validator;
 
