@@ -1,4 +1,101 @@
+package com.epay.admin.portal.validator;
 
+import com.sbi.epay.logging.utility.LoggerFactoryUtility;
+import com.sbi.epay.logging.utility.LoggerUtility;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class ChargebackFileUploadValidator extends BaseValidator {
+
+    private static final String FIELD_CARD_ISSUER = "cardIssuer";
+    private static final String FIELD_CB_STAGE = "cbStage";
+    private static final String FIELD_FILE = "file";
+
+    private static final String INVALID_FILE_ERROR_CODE = "INVALID_FILE";
+    private static final String INVALID_FILE_ERROR_MESSAGE =
+            "Invalid file. Only XLSX, XLS and CSV files are allowed.";
+
+    private static final List<String> ALLOWED_FILE_EXTENSIONS =
+            List.of("xlsx", "xls", "csv");
+
+    private final LoggerUtility logger =
+            LoggerFactoryUtility.getLogger(this.getClass());
+
+    /**
+     * Validates Chargeback file upload request.
+     *
+     * @param cardIssuer Card issuer
+     * @param cbStage    Chargeback stage
+     * @param file       Chargeback upload file
+     */
+    public void validateChargebackFileUpload(
+            String cardIssuer,
+            String cbStage,
+            MultipartFile file) {
+
+        errorDtoList = new ArrayList<>();
+
+        logger.info("validateChargebackFileUpload - validation started");
+
+        // Mandatory validations
+        checkMandatoryField(cardIssuer, FIELD_CARD_ISSUER);
+        checkMandatoryField(cbStage, FIELD_CB_STAGE);
+        checkMandatoryField(file, FIELD_FILE);
+
+        // File validation
+        if (file != null && !file.isEmpty()) {
+            validateFileExtension(file);
+        }
+
+        // Throw validation errors if any
+        throwIfErrors();
+    }
+
+    /**
+     * Validates uploaded file extension.
+     */
+    private void validateFileExtension(MultipartFile file) {
+
+        String originalFileName = file.getOriginalFilename();
+
+        if (originalFileName == null || originalFileName.isBlank()) {
+            addError(
+                    FIELD_FILE,
+                    INVALID_FILE_ERROR_CODE,
+                    "File name is required."
+            );
+            return;
+        }
+
+        String extension = getFileExtension(originalFileName);
+
+        if (!ALLOWED_FILE_EXTENSIONS.contains(extension.toLowerCase())) {
+            addError(
+                    FIELD_FILE,
+                    INVALID_FILE_ERROR_CODE,
+                    INVALID_FILE_ERROR_MESSAGE
+            );
+        }
+    }
+
+    /**
+     * Extracts file extension from file name.
+     */
+    private String getFileExtension(String fileName) {
+
+        int lastDotIndex = fileName.lastIndexOf('.');
+
+        if (lastDotIndex == -1 || lastDotIndex == fileName.length() - 1) {
+            return "";
+        }
+
+        return fileName.substring(lastDotIndex + 1);
+    }
+}
+
+//////
 package com.epay.admin.portal.externalservice;
 
 import com.epay.admin.portal.config.S3Config;
