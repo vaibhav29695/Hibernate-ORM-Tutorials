@@ -1,3 +1,85 @@
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class CbStageDropdownDto {
+
+    private String key;
+    private String value;
+}
+////////////
+
+@Repository
+public interface CbStageRepository extends JpaRepository<CbStageEntity, String> {
+
+    @Query("""
+           SELECT new com.yourpackage.dto.CbStageDropdownDto(
+               c.cbstagedesc,
+               c.cbstagecode
+           )
+           FROM CbStageEntity c
+           ORDER BY c.cbstagedesc
+           """)
+    List<CbStageDropdownDto> findCbStageDropdown();
+}
+////////////
+
+@Entity
+@Table(name = "CB_STAGE_MASTER")
+@Data
+public class CbStageEntity {
+
+    @Id
+    @Column(name = "CBSTAGECODE")
+    private String cbstagecode;
+
+    @Column(name = "CBSTAGEDESC")
+    private String cbstagedesc;
+
+    @Column(name = "INSTRUCTIONTYPE")
+    private String instructionType;
+
+    @Column(name = "CREATIONDATE")
+    private Date creationDate;
+
+    @Column(name = "CREATEDBY")
+    private String createdBy;
+}
+
+
+///////////
+@Service
+@RequiredArgsConstructor
+public class CbStageService {
+
+    private final CbStageRepository cbStageRepository;
+
+    public List<CbStageDropdownDto> getCbStageDropdown() {
+        return cbStageRepository.findCbStageDropdown();
+    }
+}
+
+
+/////////
+@RestController
+@RequestMapping("/api/cb-stage")
+@RequiredArgsConstructor
+public class CbStageController {
+
+    private final CbStageService cbStageService;
+
+    @GetMapping("/dropdown")
+    public ResponseEntity<List<CbStageDropdownDto>> getCbStageDropdown() {
+
+        List<CbStageDropdownDto> response =
+                cbStageService.getCbStageDropdown();
+
+        return ResponseEntity.ok(response);
+    }
+}
+
+
+*****""""
+
 
 CREATE TABLE CHARGEBACK_UPLOAD_RESPONSE_DTLS (
     ID              RAW(16) DEFAULT SYS_GUID() NOT NULL,
