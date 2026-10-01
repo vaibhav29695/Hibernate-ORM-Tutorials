@@ -1,3 +1,57 @@
+@Entity
+@Table(name = "chargeback_details")
+@Getter
+@Setter
+public class ChargebackDetails {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "cb_reason")
+    private String cbReason;
+
+    @Column(name = "merchant_id")
+    private String merchantId;
+
+    @Column(name = "merchant_name")
+    private String merchantName;
+
+    @Column(name = "cb_amount")
+    private BigDecimal cbAmount;
+
+    @Column(name = "cb_book_amount")
+    private BigDecimal cbBookAmount;
+
+    @Column(name = "merchant_order_amount")
+    private BigDecimal merchantOrderAmount;
+
+    @Column(name = "gateway_posting_amount")
+    private BigDecimal gatewayPostingAmount;
+
+    @Column(name = "transaction_date")
+    private LocalDate transactionDate;
+
+    @Column(name = "cb_raised_date")
+    private LocalDate cbRaisedDate;
+
+    @Column(name = "cb_status")
+    private String cbStatus;
+
+    @Column(name = "merchant_cb_tat")
+    private Integer merchantCbTat;
+
+    @Column(name = "merchant_reversal_expected")
+    private String merchantReversalExpected;
+}
+
+
+//////////////
+
+
+
+
+
 @Getter
 @Setter
 public class ChargebackFilterRequest {
