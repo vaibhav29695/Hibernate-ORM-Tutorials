@@ -1,5 +1,21 @@
 @Getter
 @Setter
+public class ChargebackFilterRequest {
+
+    private LocalDate fromDate;
+
+    private LocalDate toDate;
+
+    private String chargebackStatus;
+
+    private String merchantId;
+}
+
+///////
+
+
+@Getter
+@Setter
 @Builder
 public class ChargebackDashboardResponse {
 
