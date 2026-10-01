@@ -1,3 +1,30 @@
+@Getter
+@Setter
+@Builder
+public class ChargebackDashboardResponse {
+
+    private String cbReason;
+    private String merchantId;
+    private String merchantName;
+
+    private BigDecimal cbAmount;
+    private BigDecimal cbBookAmount;
+    private BigDecimal merchantOrderAmount;
+    private BigDecimal gatewayPostingAmount;
+
+    private LocalDate transactionDate;
+    private LocalDate cbRaisedDate;
+
+    private String cbStatus;
+    private Integer merchantCbTat;
+
+    private String merchantReversalExpected;
+}
+
+////////
+
+
+
 public class ChargebackSpecification {
 
     private ChargebackSpecification() {
