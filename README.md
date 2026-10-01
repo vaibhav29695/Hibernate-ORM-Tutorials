@@ -1,3 +1,49 @@
+@RestController
+@RequestMapping("/api/chargeback")
+@RequiredArgsConstructor
+@Slf4j
+public class ChargebackDashboardController {
+
+    private final ChargebackDashboardService dashboardService;
+
+    @PostMapping("/dashboard")
+    public ResponseEntity<Page<ChargebackDashboardResponse>> getDashboard(
+            @RequestBody ChargebackFilterRequest request,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        log.info(
+                "Chargeback dashboard request. page={}, size={}",
+                page,
+                size
+        );
+
+        Pageable pageable =
+                PageRequest.of(
+                        page,
+                        size,
+                        Sort.by(
+                                Sort.Direction.DESC,
+                                "transactionDate"
+                        )
+                );
+
+        Page<ChargebackDashboardResponse> response =
+                dashboardService.getDashboardData(
+                        request,
+                        pageable
+                );
+
+        return ResponseEntity.ok(response);
+    }
+}
+
+
+//////
+
+
+
+
 @Repository
 public interface ChargebackRepository
         extends JpaRepository<ChargebackDetails, Long>,
