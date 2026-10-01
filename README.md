@@ -1,4 +1,66 @@
+public class ChargebackSpecification {
 
+    private ChargebackSpecification() {
+    }
+
+    public static Specification<ChargebackDetails> filter(
+            ChargebackFilterRequest request) {
+
+        return (root, query, cb) -> {
+
+            List<Predicate> predicates = new ArrayList<>();
+
+            // From Date
+            if (request.getFromDate() != null) {
+
+                predicates.add(
+                        cb.greaterThanOrEqualTo(
+                                root.get("transactionDate"),
+                                request.getFromDate()
+                        )
+                );
+            }
+
+            // To Date
+            if (request.getToDate() != null) {
+
+                predicates.add(
+                        cb.lessThanOrEqualTo(
+                                root.get("transactionDate"),
+                                request.getToDate()
+                        )
+                );
+            }
+
+            // Chargeback Status
+            if (StringUtils.hasText(request.getChargebackStatus())
+                    && !"ALL".equalsIgnoreCase(request.getChargebackStatus())) {
+
+                predicates.add(
+                        cb.equal(
+                                root.get("cbStatus"),
+                                request.getChargebackStatus()
+                        )
+                );
+            }
+
+            // Merchant ID
+            if (StringUtils.hasText(request.getMerchantId())) {
+
+                predicates.add(
+                        cb.equal(
+                                root.get("merchantId"),
+                                request.getMerchantId()
+                        )
+                );
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+}
+
+/////
 @Service
 @RequiredArgsConstructor
 @Slf4j
