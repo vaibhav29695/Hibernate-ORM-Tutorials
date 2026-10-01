@@ -1,3 +1,12 @@
+@Repository
+public interface ChargebackRepository
+        extends JpaRepository<ChargebackDetails, Long>,
+                JpaSpecificationExecutor<ChargebackDetails> {
+}
+//
+
+
+
 @RestController
 @RequestMapping("/api/chargeback")
 @RequiredArgsConstructor
