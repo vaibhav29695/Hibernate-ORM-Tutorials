@@ -1,3 +1,56 @@
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class ChargebackDashboardService {
+
+    private final ChargebackRepository chargebackRepository;
+
+    public Page<ChargebackDashboardResponse> getDashboardData(
+            ChargebackFilterRequest request,
+            Pageable pageable) {
+
+        log.info(
+                "Fetching chargeback dashboard data. fromDate={}, toDate={}, status={}, merchantId={}, page={}, size={}",
+                request.getFromDate(),
+                request.getToDate(),
+                request.getChargebackStatus(),
+                request.getMerchantId(),
+                pageable.getPageNumber(),
+                pageable.getPageSize()
+        );
+
+        Specification<ChargebackDetails> specification =
+                ChargebackSpecification.filter(request);
+
+        Page<ChargebackDetails> page =
+                chargebackRepository.findAll(specification, pageable);
+
+        return page.map(this::mapToResponse);
+    }
+
+    private ChargebackDashboardResponse mapToResponse(
+            ChargebackDetails entity) {
+
+        return ChargebackDashboardResponse.builder()
+                .cbReason(entity.getCbReason())
+                .merchantId(entity.getMerchantId())
+                .merchantName(entity.getMerchantName())
+                .cbAmount(entity.getCbAmount())
+                .cbBookAmount(entity.getCbBookAmount())
+                .merchantOrderAmount(entity.getMerchantOrderAmount())
+                .gatewayPostingAmount(entity.getGatewayPostingAmount())
+                .transactionDate(entity.getTransactionDate())
+                .cbRaisedDate(entity.getCbRaisedDate())
+                .cbStatus(entity.getCbStatus())
+                .merchantCbTat(entity.getMerchantCbTat())
+                .merchantReversalExpected(
+                        entity.getMerchantReversalExpected())
+                .build();
+    }
+}
+//////////
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
