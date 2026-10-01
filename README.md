@@ -1,3 +1,86 @@
+
+public class ChargebackSpecification {
+
+    private ChargebackSpecification() {
+    }
+
+    public static Specification<ChargebackDetails> filter(
+            ChargebackFilterRequest request) {
+
+        return (root, query, cb) -> {
+
+            List<Predicate> predicates = new ArrayList<>();
+
+            // Created Date - From Date
+            if (request.getFromDate() != null) {
+
+                long fromDateMillis = request.getFromDate()
+                        .atStartOfDay(ZoneId.systemDefault())
+                        .toInstant()
+                        .toEpochMilli();
+
+                predicates.add(
+                        cb.greaterThanOrEqualTo(
+                                root.get("createdDate"),
+                                fromDateMillis
+                        )
+                );
+            }
+
+            // Created Date - To Date
+            if (request.getToDate() != null) {
+
+                // Use next day at 00:00:00
+                // and use < instead of <=
+                long toDateMillis = request.getToDate()
+                        .plusDays(1)
+                        .atStartOfDay(ZoneId.systemDefault())
+                        .toInstant()
+                        .toEpochMilli();
+
+                predicates.add(
+                        cb.lessThan(
+                                root.get("createdDate"),
+                                toDateMillis
+                        )
+                );
+            }
+
+            // Chargeback Status
+            if (StringUtils.hasText(request.getChargebackStatus())
+                    && !"ALL".equalsIgnoreCase(
+                            request.getChargebackStatus())) {
+
+                predicates.add(
+                        cb.equal(
+                                root.get("cbStatus"),
+                                request.getChargebackStatus()
+                        )
+                );
+            }
+
+            // Merchant ID
+            if (StringUtils.hasText(request.getMerchantId())) {
+
+                predicates.add(
+                        cb.equal(
+                                root.get("merchantId"),
+                                request.getMerchantId()
+                        )
+                );
+            }
+
+            return cb.and(
+                    predicates.toArray(new Predicate[0])
+            );
+        };
+    }
+}
+
+///
+
+
+
 @Entity
 @Table(name = "chargeback_details")
 @Getter
