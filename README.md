@@ -1,3 +1,12 @@
+@Repository
+public interface ChargebackRepository
+        extends JpaRepository<ChargebackDetails, Long>,
+                JpaSpecificationExecutor<ChargebackDetails> {
+}
+
+//////
+
+
 @Getter
 @Setter
 public class ChargebackFilterRequest {
