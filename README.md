@@ -1,6 +1,16 @@
-
-import org.mapstruct.Mapper;
-import org.mapstruct.ReportingPolicy;
+@Query(
+    value = """
+        SELECT b.*
+        FROM CHARGEBACK_BOOKING b
+        LEFT JOIN MERCHANT_ORDER_PAYMENTS m
+            ON b.ATRN_NUM = m.ATRN_NUM
+        WHERE b.CREATED_DATE BETWEEN :fromDate AND :toDate
+          AND (:merchantId IS NULL OR m.MERCHANT_ID = :merchantId)
+          AND (:status IS NULL OR m.CHARGEBACK_STATUS = :status)
+        ORDER BY b.CREATED_DATE DESC
+        """,
+        
+        ///////
 import org.springframework.data.domain.Page;
 
 import java.util.List;
