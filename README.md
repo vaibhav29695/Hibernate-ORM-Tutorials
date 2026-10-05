@@ -1,4 +1,45 @@
 
+import org.mapstruct.Mapper;
+import org.mapstruct.ReportingPolicy;
+import org.springframework.data.domain.Page;
+
+import java.util.List;
+
+@Mapper(
+        componentModel = "spring",
+        unmappedSourcePolicy = ReportingPolicy.IGNORE,
+        unmappedTargetPolicy = ReportingPolicy.IGNORE
+)
+public interface ChargebackBookingMapper {
+
+    ChargebackBookingDto toDto(ChargebackBooking entity);
+
+    ChargebackBooking toEntity(ChargebackBookingDto dto);
+
+    default Page<ChargebackBookingDto> toDtoPage(
+            Page<ChargebackBooking> entityPage) {
+
+        return entityPage.map(this::toDto);
+    }
+
+    List<ChargebackBooking> toEntityList(
+            List<ChargebackBookingDto> dtoList);
+}
+
+
+////////
+
+
+
+
+
+
+
+
+
+
+
+
 public class ChargebackSpecification {
 
     private ChargebackSpecification() {
