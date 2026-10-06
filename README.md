@@ -1,3 +1,111 @@
+public Page<ChargebackBookingDto> getChargebackDetailsBetweenDate(
+        Long fromDate,
+        Long toDate,
+        Pageable pageable) {
+
+    logger.info(
+        "Fetching chargeback details fromDate: {}, toDate: {}, page: {}, size: {}",
+        fromDate,
+        toDate,
+        pageable.getPageNumber(),
+        pageable.getPageSize()
+    );
+
+    Page<ChargebackBooking> entityPage =
+            chargebackBookingRepository.findByCreatedDateAndUpdatedDate(
+                    fromDate,
+                    toDate,
+                    pageable
+            );
+
+    return entityPage.map(chargebackBookingMapper::toDto);
+}
+
+/////////
+
+public interface ChargebackBookingRepository
+        extends JpaRepository<ChargebackBooking, String> {
+
+    @Query(
+        value = """
+            SELECT *
+            FROM CHARGEBACK_BOOKING
+            WHERE CREATED_DATE BETWEEN :fromDate AND :uptoDate
+            ORDER BY UPDATED_DATE DESC
+            """,
+        countQuery = """
+            SELECT COUNT(*)
+            FROM CHARGEBACK_BOOKING
+            WHERE CREATED_DATE BETWEEN :fromDate AND :uptoDate
+            """,
+        nativeQuery = true
+    )
+    Page<ChargebackBooking> findByCreatedDateAndUpdatedDate(
+            @Param("fromDate") Long fromDate,
+            @Param("uptoDate") Long uptoDate,
+            Pageable pageable);
+}
+////////
+
+public Page<ChargebackBookingDto> getChargebackDetails(
+        ChargebackDashboardRequest chargebackDashboardRequest,
+        Pageable pageable) {
+
+    logger.info(
+            "Fetching chargeback details, page: {}, size: {}",
+            pageable.getPageNumber(),
+            pageable.getPageSize());
+
+    chargeBackValidator.validateChargebackDashboardRequest(
+            chargebackDashboardRequest);
+
+    Long fromDate = chargebackDashboardRequest.getFromDate();
+    Long toDate = chargebackDashboardRequest.getToDate();
+
+    logger.info(
+            "Fetching chargeback details between fromDate: {} and toDate: {}",
+            fromDate,
+            toDate);
+
+    return chargebackDao.getChargebackDetailsBetweenDate(
+            fromDate,
+            toDate,
+            pageable);
+}
+
+////////
+@PostMapping("/date")
+@Operation(summary = "API for fetching chargeback details")
+public TransactionResponse<Object> createChargeback(
+        @RequestBody ChargebackDashboardRequest chargebackDashboardRequest,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size) {
+
+    logger.info(
+            "Request received to fetch chargeback details. page: {}, size: {}",
+            page,
+            size);
+
+    Pageable pageable = PageRequest.of(
+            page,
+            size
+    );
+
+    Page<ChargebackBookingDto> chargebackPage =
+            chargebackService.getChargebackDetails(
+                    chargebackDashboardRequest,
+                    pageable);
+
+    return TransactionResponse.builder()
+            .data(chargebackPage)
+            .build();
+}
+
+/////////
+
+
+
+
 @Query(
     value = """
         SELECT b.*
