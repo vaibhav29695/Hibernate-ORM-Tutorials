@@ -1,3 +1,28 @@
+
+@RestController
+@RequestMapping("/api/cb-stage")
+@RequiredArgsConstructor
+public class CbStageController {
+
+    private final CbStageService cbStageService;
+
+    private final LoggerUtility logger =
+            LoggerFactoryUtility.getLogger(this.getClass());
+
+    @GetMapping("/dropdown")
+    public AdminPortalResponse<CbStageDropdownResponseDto>
+            getCbStageDropdown() {
+
+        logger.info("Received request to fetch CB Stage dropdown");
+
+        return cbStageService.getCbStageDropdown();
+    }
+}
+
+////////
+
+
+
 package com.epay.transaction.mapper;
 
 import com.epay.transaction.dto.ChargebackBookingDto;
