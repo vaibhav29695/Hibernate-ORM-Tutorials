@@ -1,4 +1,37 @@
 
+@Service
+@RequiredArgsConstructor
+public class CbStageService {
+
+    private final CbStageDao cbStageDao;
+
+    private final LoggerUtility logger =
+            LoggerFactoryUtility.getLogger(this.getClass());
+
+    public AdminPortalResponse<CbStageDropdownResponseDto>
+            getCbStageDropdown() {
+
+        logger.info("Fetching CB Stage dropdown from DAO");
+
+        List<CbStageDropdownDto> cbStageList =
+                cbStageDao.createCbStageDropdown();
+
+        CbStageDropdownResponseDto result =
+                CbStageDropdownResponseDto.builder()
+                        .cbStageList(cbStageList)
+                        .build();
+
+        return AdminPortalResponse.<CbStageDropdownResponseDto>builder()
+                .status(SUCCESS_RESPONSE_CODE)
+                .data(List.of(result))
+                .build();
+    }
+}
+
+
+//////
+
+
 @RestController
 @RequestMapping("/api/cb-stage")
 @RequiredArgsConstructor
