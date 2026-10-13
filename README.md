@@ -1,3 +1,97 @@
+package com.epay.transaction.mapper;
+
+import com.epay.transaction.dto.ChargebackBookingDto;
+import com.epay.transaction.entity.ChargebackBooking;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.ReportingPolicy;
+
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.Date;
+import java.util.List;
+
+@Mapper(
+    componentModel = "spring",
+    unmappedSourcePolicy = ReportingPolicy.IGNORE,
+    unmappedTargetPolicy = ReportingPolicy.IGNORE
+)
+public interface ChargebackBookingMapper {
+
+    // Entity to DTO
+    @Mapping(source = "cbrnNum", target = "cbrn")
+    @Mapping(source = "atrnNum", target = "atrn")
+    @Mapping(source = "cin", target = "cinNumber")
+    @Mapping(source = "orderRefNumber", target = "merchantOrderNo")
+    @Mapping(source = "cbStageCode", target = "cbStage")
+    @Mapping(source = "reasonDescription", target = "cbReason")
+    @Mapping(source = "cbBookAmount", target = "cbBook")
+    @Mapping(source = "orderAmount", target = "merchantOrderAmount")
+    @Mapping(source = "cbRaiseDate", target = "cbRaisedDate")
+    @Mapping(source = "cbTat", target = "cbTat")
+    @Mapping(source = "epayTat", target = "tat")
+    @Mapping(source = "remainingMerchantTat", target = "merchantCbTatRemain")
+    @Mapping(source = "revertDtExpMerch", target = "merchantRevertExpected")
+    ChargebackBookingDto toDto(ChargebackBooking entity);
+
+    // DTO to Entity
+    @Mapping(source = "cbrn", target = "cbrnNum")
+    @Mapping(source = "atrn", target = "atrnNum")
+    @Mapping(source = "cinNumber", target = "cin")
+    @Mapping(source = "merchantOrderNo", target = "orderRefNumber")
+    @Mapping(source = "cbStage", target = "cbStageCode")
+    @Mapping(source = "cbReason", target = "reasonDescription")
+    @Mapping(source = "cbBook", target = "cbBookAmount")
+    @Mapping(source = "merchantOrderAmount", target = "orderAmount")
+    @Mapping(source = "cbRaisedDate", target = "cbRaiseDate")
+    @Mapping(source = "cbTat", target = "cbTat")
+    @Mapping(source = "tat", target = "epayTat")
+    @Mapping(source = "merchantCbTatRemain", target = "remainingMerchantTat")
+    @Mapping(source = "merchantRevertExpected", target = "revertDtExpMerch")
+    ChargebackBooking toEntity(ChargebackBookingDto dto);
+
+    // Entity list to DTO list
+    List<ChargebackBookingDto> toDtoList(
+        List<ChargebackBooking> entityList
+    );
+
+    // DTO list to Entity list
+    List<ChargebackBooking> toEntityList(
+        List<ChargebackBookingDto> dtoList
+    );
+
+    // Date -> LocalDate
+    default LocalDate map(Date date) {
+        if (date == null) {
+            return null;
+        }
+
+        return date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+    }
+
+    // LocalDate -> Date
+    default Date map(LocalDate date) {
+        if (date == null) {
+            return null;
+        }
+
+        return Date.from(
+            date.atStartOfDay(ZoneId.systemDefault())
+                .toInstant()
+        );
+    }
+}
+
+
+
+///////
+
+
+
+
+
 public Page<ChargebackBookingDto> getChargebackDetailsBetweenDate(
         Long fromDate,
         Long toDate,
