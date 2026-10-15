@@ -1,3 +1,21 @@
+import jakarta.validation.constraints.NotNull;
+import java.time.LocalDate;
+import lombok.Data;
+
+@Data
+public class ChargebackMisRequestDto {
+
+    @NotNull(message = "From date is required")
+    private LocalDate fromDate;
+
+    @NotNull(message = "To date is required")
+    private LocalDate toDate;
+
+    private String chargebackStatus = "All";
+}
+
+
+/////
 import java.time.LocalDateTime;
 import java.util.List;
 
