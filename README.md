@@ -1,3 +1,31 @@
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+public interface ChargebackRepository
+        extends JpaRepository<ChargebackEntity, Long> {
+
+    @Query("""
+        SELECT c
+        FROM ChargebackEntity c
+        WHERE c.transactionDate >= :fromDate
+          AND c.transactionDate < :toDate
+          AND (
+              :status = 'All'
+              OR c.chargebackStatus = :status
+          )
+        ORDER BY c.transactionDate DESC
+        """)
+    List<ChargebackEntity> findChargebackMisData(
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate,
+            @Param("status") String status);
+}
+
+/////
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDateTime;
