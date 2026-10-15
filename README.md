@@ -1,3 +1,34 @@
+// Generate Excel in memory
+workbook.write(output);
+byte[] excelData = output.toByteArray();
+
+// Folder where MIS Excel files will be stored
+Path folderPath = Paths.get("C:/ChargebackMIS");
+
+// Create folder if it does not exist
+Files.createDirectories(folderPath);
+
+// Generate unique file name
+String fileName = "Chargeback_MIS_Report_"
+        + System.currentTimeMillis() + ".xlsx";
+
+Path filePath = folderPath.resolve(fileName);
+
+// Save Excel file into the folder
+Files.write(
+        filePath,
+        excelData,
+        StandardOpenOption.CREATE_NEW,
+        StandardOpenOption.WRITE
+);
+
+// Return Excel data if your API also downloads the file
+return excelData;
+
+
+/////
+
+
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import lombok.Data;
