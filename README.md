@@ -1,4 +1,104 @@
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.List;
 
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+public class ChargebackMisServiceImpl
+        implements ChargebackMisService {
+
+    private final ChargebackRepository chargebackRepository;
+
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] downloadMisReport(
+            ChargebackMisRequestDto request) throws IOException {
+
+        if (request.getFromDate().isAfter(request.getToDate())) {
+            throw new IllegalArgumentException(
+                    "From date cannot be after To date");
+        }
+
+        String status = request.getChargebackStatus();
+
+        if (status == null || status.isBlank()) {
+            status = "All";
+        }
+
+        LocalDateTime fromDate =
+                request.getFromDate().atStartOfDay();
+
+        LocalDateTime toDateExclusive =
+                request.getToDate().plusDays(1).atStartOfDay();
+
+        List<ChargebackEntity> records =
+                chargebackRepository.findChargebackMisData(
+                        fromDate, toDateExclusive, status);
+
+        try (Workbook workbook = new XSSFWorkbook();
+             ByteArrayOutputStream output =
+                     new ByteArrayOutputStream()) {
+
+            Sheet sheet = workbook.createSheet("Chargeback MIS");
+
+            // Excel header
+            Row header = sheet.createRow(0);
+            header.createCell(0).setCellValue("Transaction Date");
+            header.createCell(1).setCellValue("Transaction ID");
+            header.createCell(2).setCellValue("Chargeback Status");
+            header.createCell(3).setCellValue("Amount");
+
+            // Excel data
+            int rowIndex = 1;
+
+            for (ChargebackEntity record : records) {
+                Row row = sheet.createRow(rowIndex++);
+
+                // Replace these properties with your entity fields.
+                row.createCell(0).setCellValue(
+                        record.getTransactionDate() == null
+                                ? ""
+                                : record.getTransactionDate().toString());
+
+                row.createCell(1).setCellValue(
+                        record.getTransactionId() == null
+                                ? ""
+                                : record.getTransactionId());
+
+                row.createCell(2).setCellValue(
+                        record.getChargebackStatus() == null
+                                ? ""
+                                : record.getChargebackStatus());
+
+                if (record.getAmount() != null) {
+                    row.createCell(3).setCellValue(
+                            record.getAmount().doubleValue());
+                } else {
+                    row.createCell(3).setCellValue(0);
+                }
+            }
+
+            for (int i = 0; i < 4; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            workbook.write(output);
+            return output.toByteArray();
+        }
+    }
+}
+
+///////
 import java.io.IOException;
 
 import javax.servlet.http.HttpServletResponse;
