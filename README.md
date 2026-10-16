@@ -1,4 +1,34 @@
+import java.io.IOException;
 
+import javax.servlet.http.HttpServletResponse;
+
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
+
+@Component
+public class ExcelGenerator {
+
+    public void downloadExcelFile(
+            HttpServletResponse response,
+            String fileName,
+            byte[] excelData) throws IOException {
+
+        response.setContentType(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
+        response.setHeader(
+                HttpHeaders.CONTENT_DISPOSITION,
+                "attachment; filename=\"" + fileName + "\"");
+
+        response.setContentLength(excelData.length);
+
+        response.getOutputStream().write(excelData);
+        response.getOutputStream().flush();
+    }
+}
+
+//////
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
