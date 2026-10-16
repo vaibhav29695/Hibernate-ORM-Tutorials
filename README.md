@@ -1,3 +1,214 @@
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+public class ChargebackMisServiceImpl implements ChargebackMisService {
+
+    private final ChargebackBookingRepository chargebackBookingRepository;
+
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] downloadMisReport(
+            ChargebackMisRequestDto request) throws IOException {
+
+        if (request.getFromDate() == null
+                || request.getToDate() == null) {
+            throw new IllegalArgumentException(
+                    "From date and To date are required");
+        }
+
+        if (request.getFromDate().isAfter(request.getToDate())) {
+            throw new IllegalArgumentException(
+                    "From date cannot be after To date");
+        }
+
+        String status = request.getChargebackStatus();
+
+        if (status == null || status.isBlank()) {
+            status = "All";
+        }
+
+        LocalDateTime fromDate =
+                request.getFromDate().atStartOfDay();
+
+        LocalDateTime toDateExclusive =
+                request.getToDate().plusDays(1).atStartOfDay();
+
+        List<ChargebackBookingEntity> records =
+                chargebackBookingRepository.findChargebackMisData(
+                        fromDate, toDateExclusive, status);
+
+        String[] headers = {
+            "DISPUTE",
+            "ATRN",
+            "ARN",
+            "MID",
+            "Merchant Name",
+            "Merchant Order No",
+            "Reason Codes",
+            "REASON As per...",
+            "Trnx. Date",
+            "Chrg Rec Date",
+            "CB TAT",
+            "Gateway trace number",
+            "Trnx's Amt",
+            "Order Amt",
+            "REMARKS",
+            "STATUS",
+            "CARD NUMBER",
+            "EPAY TAT",
+            "CB send to ME date",
+            "Date of Revert Expected",
+            "CIN No",
+            "Payprocid",
+            "TRANSACTION SETTLEMENT",
+            "CB ADJUSTED",
+            "Additional Remarks"
+        };
+
+        // Store Excel in memory and also save it to disk.
+        try (Workbook workbook = new XSSFWorkbook();
+             ByteArrayOutputStream output =
+                     new ByteArrayOutputStream()) {
+
+            Sheet sheet = workbook.createSheet("Chargeback MIS");
+
+            // Header styling
+            CellStyle headerStyle = workbook.createCellStyle();
+
+            Font font = workbook.createFont();
+            font.setBold(true);
+            headerStyle.setFont(font);
+            headerStyle.setFillForegroundColor(
+                    IndexedColors.GREY_25_PERCENT.getIndex());
+            headerStyle.setFillPattern(
+                    FillPatternType.SOLID_FOREGROUND);
+            headerStyle.setBorderBottom(BorderStyle.THIN);
+
+            Row header = sheet.createRow(0);
+
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = header.createCell(i);
+                cell.setCellValue(headers[i]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            // Populate Excel rows using entity properties
+            int rowIndex = 1;
+
+            for (ChargebackBookingEntity record : records) {
+
+                Row row = sheet.createRow(rowIndex++);
+
+                setText(row, 0, record.getCbInstructionType());
+                setText(row, 1, record.getAtrnNum());
+                setText(row, 2, record.getArnNum());
+                setText(row, 3, record.getMerchantId());
+                setText(row, 4, record.getMerchantName());
+                setText(row, 5, record.getOrderRefNumber());
+                setText(row, 6, record.getReasonCode());
+                setText(row, 7, record.getReasonDescription());
+
+                setText(row, 8, record.getTransactionDate());
+                setText(row, 9, record.getCbRaiseDate());
+                setText(row, 10, record.getCbTat());
+
+                setText(row, 11, record.getBankReferenceNumber());
+
+                setAmount(row, 12, record.getGatewayPostingAmount());
+                setAmount(row, 13, record.getOrderAmount());
+
+                setText(row, 14, record.getRemarks());
+                setText(row, 15, record.getChargebackStatus());
+                setText(row, 16, record.getCardNumber());
+                setText(row, 17, record.getEpayTat());
+
+                setText(row, 18, record.getChbkDate());
+                setText(row, 19, record.getRevertdateExpMerch());
+                setText(row, 20, record.getCin());
+                setText(row, 21, record.getPayProcId());
+
+                // These two columns require confirmation of the
+                // exact source fields used in your existing MIS.
+                setText(row, 22, "");
+                setText(row, 23, "");
+                setText(row, 24, "");
+            }
+
+            // Filter, freeze header, and set readable widths.
+            sheet.setAutoFilter(new CellRangeAddress(
+                    0, Math.max(0, rowIndex - 1),
+                    0, headers.length - 1));
+
+            sheet.createFreezePane(0, 1);
+
+            for (int i = 0; i < headers.length; i++) {
+                sheet.setColumnWidth(i, 20 * 256);
+            }
+
+            // Generate Excel bytes
+            workbook.write(output);
+            byte[] excelData = output.toByteArray();
+
+            // Save file in the configured folder
+            Path folder = Paths.get("C:/ChargebackMIS");
+            Files.createDirectories(folder);
+
+            String fileName = "CHARGEBACK_MIS_"
+                    + System.currentTimeMillis() + ".xlsx";
+
+            Path filePath = folder.resolve(fileName);
+
+            Files.write(filePath, excelData);
+
+            return excelData;
+        }
+    }
+
+    private static void setText(
+            Row row, int column, Object value) {
+
+        Cell cell = row.createCell(column);
+
+        if (value != null) {
+            cell.setCellValue(value.toString());
+        } else {
+            cell.setCellValue("");
+        }
+    }
+
+    private static void setAmount(
+            Row row, int column, BigDecimal amount) {
+
+        Cell cell = row.createCell(column);
+
+        if (amount != null) {
+            cell.setCellValue(amount.doubleValue());
+        } else {
+            cell.setCellValue(0);
+        }
+    }
+}
+
+
+/////
+
 // Generate Excel in memory
 workbook.write(output);
 byte[] excelData = output.toByteArray();
