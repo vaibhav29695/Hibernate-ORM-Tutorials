@@ -1,4 +1,43 @@
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Component
+@Slf4j
+public class ChargebackMisClient extends ApiClient {
+
+    private static final String CHARGEBACK_MIS_DOWNLOAD =
+            "/mis/download";
+
+    public ChargebackMisClient(
+            String baseUrl,
+            String corsOrigin,
+            ObjectMapper objectMapper) {
+
+        super(baseUrl, corsOrigin, objectMapper);
+    }
+
+    public ReportingResponse<String> downloadMisReport(
+            ChargebackMisRequestDto request) {
+
+        log.info("Calling Chargeback MIS API with request: {}", request);
+
+        ReportingResponse<String> response = post(
+                CHARGEBACK_MIS_DOWNLOAD,
+                request,
+                new ParameterizedTypeReference<ReportingResponse<String>>() {}
+        );
+
+        log.info("Chargeback MIS API response status: {}",
+                response.getStatus());
+
+        return response;
+    }
+}
+
+
+///////
 import java.time.Duration;
 
 import org.springframework.beans.factory.annotation.Value;
