@@ -1,3 +1,6 @@
+external.api.services.endpoint.chargeback-mis=http://localhost:8080
+
+///
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 
