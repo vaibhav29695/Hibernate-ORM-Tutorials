@@ -1,3 +1,40 @@
+@Service
+@RequiredArgsConstructor
+public class ChargebackService {
+
+    private final ChargebackMisClient chargebackMisClient;
+
+    public ReportingResponse<String> downloadChargebackMis(
+            ChargebackMisRequestDto request) {
+
+        if (request == null
+                || request.getFromDate() == null
+                || request.getToDate() == null) {
+            throw new IllegalArgumentException(
+                    "From date and To date are required");
+        }
+
+        LocalDate fromDate = request.getFromDate();
+        LocalDate toDate = request.getToDate();
+
+        if (fromDate.isAfter(toDate)) {
+            throw new IllegalArgumentException(
+                    "From date cannot be after To date");
+        }
+
+        if (request.getChargebackStatus() == null
+                || request.getChargebackStatus().isBlank()) {
+            request.setChargebackStatus("All");
+        }
+
+        // Call Chargeback MIS API using WebClient
+        return chargebackMisClient.downloadMisReport(request);
+    }
+}
+
+////
+
+
 external.api.services.endpoint.chargeback-mis=http://localhost:8080
 
 ///
