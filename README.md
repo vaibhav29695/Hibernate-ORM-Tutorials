@@ -4,6 +4,65 @@ public class ChargebackService {
 
     private final ChargebackMisClient chargebackMisClient;
 
+    public byte[] downloadChargebackMis(
+            ChargebackMisRequestDto request) {
+
+        if (request == null
+                || request.getFromDate() == null
+                || request.getToDate() == null) {
+            throw new IllegalArgumentException(
+                    "From date and To date are required");
+        }
+
+        if (request.getFromDate().isAfter(request.getToDate())) {
+            throw new IllegalArgumentException(
+                    "From date cannot be after To date");
+        }
+
+        if (request.getChargebackStatus() == null
+                || request.getChargebackStatus().isBlank()) {
+            request.setChargebackStatus("All");
+        }
+
+        return chargebackMisClient.downloadMisReport(request);
+    }
+}
+
+
+/////
+
+@Component
+@Slf4j
+public class ChargebackMisClient extends ApiClient {
+
+    private static final String CHARGEBACK_MIS_DOWNLOAD =
+            "/mis/download";
+
+    public ChargebackMisClient(
+            String baseUrl,
+            boolean isLocalProfile) {
+        super(baseUrl, isLocalProfile);
+    }
+
+    public byte[] downloadMisReport(
+            ChargebackMisRequestDto request) {
+
+        log.info("Calling Chargeback MIS download API");
+
+        return postExcel(CHARGEBACK_MIS_DOWNLOAD, request);
+    }
+}
+
+//////
+
+
+
+@Service
+@RequiredArgsConstructor
+public class ChargebackService {
+
+    private final ChargebackMisClient chargebackMisClient;
+
     public ReportingResponse<String> downloadChargebackMis(
             ChargebackMisRequestDto request) {
 
