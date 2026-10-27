@@ -1,3 +1,20 @@
+
+import java.time.LocalDate;
+
+import lombok.Data;
+
+@Data
+public class ChargebackMisRequestDto {
+
+    private LocalDate fromDate;
+
+    private LocalDate toDate;
+
+    private String chargebackStatus = "All";
+}
+
+///////
+
 import java.io.IOException;
 
 import javax.servlet.http.HttpServletResponse;
