@@ -1,3 +1,81 @@
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.stereotype.Component;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Component
+@Slf4j
+public class ChargebackMisClient extends ApiClient {
+
+    private static final String CHARGEBACK_MIS_DOWNLOAD =
+            "/mis/download";
+
+    public ChargebackMisClient(
+            String baseUrl,
+            String corsOrigin,
+            ObjectMapper objectMapper) {
+
+        super(baseUrl, corsOrigin, objectMapper);
+    }
+
+    public ReportingResponse<String> downloadMisReport(
+            ChargebackMisRequestDto request) {
+
+        log.info("Calling Chargeback MIS download API");
+
+        return post(
+                CHARGEBACK_MIS_DOWNLOAD,
+                request,
+                new ParameterizedTypeReference<ReportingResponse<String>>() {}
+        );
+    }
+}
+
+//////
+protected <T, R> ReportingResponse<R> post(
+        String urlPath,
+        T requestBody,
+        ParameterizedTypeReference<ReportingResponse<R>> typeReference) {
+
+    try {
+        URI uri = URI.create(getBaseUrl() + urlPath);
+
+        logger.info("Calling URI: {}", uri);
+        logger.debug("Request body: {}", requestBody);
+
+        ReportingResponse<R> response = getWebClient()
+                .post()
+                .uri(uri)
+                .headers(headers ->
+                        headers.addAll(prepareHttpHeaders()))
+                .bodyValue(requestBody)
+                .exchangeToMono(clientResponse ->
+                        clientResponse.bodyToMono(typeReference))
+                .block();
+
+        validateResponse(response);
+
+        return response;
+
+    } catch (NestedRuntimeException e) {
+        logger.error(
+                "Error while calling API: {}. Exception: {}",
+                getBaseUrl() + urlPath,
+                e.getMessage());
+
+        throw new ReportingException(
+                EXTERNAL_SERVICE_ERROR_CODE,
+                MessageFormat.format(
+                        EXTERNAL_SERVICE_ERROR_MESSAGE,
+                        getServiceName()));
+    }
+}
+
+/////
+
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
