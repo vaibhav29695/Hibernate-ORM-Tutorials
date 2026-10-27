@@ -1,4 +1,44 @@
+import java.time.LocalDate;
 
+import org.springframework.stereotype.Service;
+
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+public class ReportServiceImpl implements ReportService {
+
+    private final ChargebackMisClient chargebackMisClient;
+
+    @Override
+    public byte[] downloadChargebackMis(
+            ChargebackMisRequestDto request) {
+
+        if (request == null
+                || request.getFromDate() == null
+                || request.getToDate() == null) {
+            throw new IllegalArgumentException(
+                    "From date and To date are required");
+        }
+
+        LocalDate fromDate = request.getFromDate();
+        LocalDate toDate = request.getToDate();
+
+        if (fromDate.isAfter(toDate)) {
+            throw new IllegalArgumentException(
+                    "From date cannot be after To date");
+        }
+
+        if (request.getChargebackStatus() == null
+                || request.getChargebackStatus().isBlank()) {
+            request.setChargebackStatus("All");
+        }
+
+        return chargebackMisClient.downloadMisReport(request);
+    }
+}
+
+///////
 import java.time.LocalDate;
 
 import lombok.Data;
