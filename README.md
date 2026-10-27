@@ -4,6 +4,49 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.*;
+
+import lombok.RequiredArgsConstructor;
+
+@RestController
+@RequestMapping("/reports")
+@RequiredArgsConstructor
+public class ReportController {
+
+    private final ReportService reportService;
+
+    @PostMapping("/chargeback-mis/download")
+    public void downloadChargebackMis(
+            @RequestBody ChargebackMisRequestDto request,
+            HttpServletResponse response) throws IOException {
+
+        byte[] excelData =
+                reportService.downloadChargebackMis(request);
+
+        response.setContentType(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
+        response.setHeader(
+                HttpHeaders.CONTENT_DISPOSITION,
+                "attachment; filename=\"Chargeback_MIS_Report.xlsx\"");
+
+        response.setContentLength(excelData.length);
+
+        response.getOutputStream().write(excelData);
+        response.getOutputStream().flush();
+    }
+}
+
+
+////////
+
+
+import java.io.IOException;
+
+import javax.servlet.http.HttpServletResponse;
+
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 
 @Component
