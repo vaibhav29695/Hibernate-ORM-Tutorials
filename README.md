@@ -1,3 +1,58 @@
+
+import java.time.Duration;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+
+import lombok.RequiredArgsConstructor;
+
+@Component
+@RequiredArgsConstructor
+public class ChargebackMisClient {
+
+    private final WebClient.Builder webClientBuilder;
+
+    @Value("${external.api.services.endpoint.chargeback-mis}")
+    private String chargebackMisUrl;
+
+    public byte[] downloadMisReport(
+            ChargebackMisRequestDto request) {
+
+        try {
+            byte[] excelData = webClientBuilder.build()
+                    .post()
+                    .uri(chargebackMisUrl)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .accept(
+                        MediaType.parseMediaType(
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+                        MediaType.APPLICATION_OCTET_STREAM)
+                    .bodyValue(request)
+                    .retrieve()
+                    .bodyToMono(byte[].class)
+                    .block(Duration.ofSeconds(60));
+
+            if (excelData == null || excelData.length == 0) {
+                throw new IllegalStateException(
+                        "Chargeback MIS API returned an empty file");
+            }
+
+            return excelData;
+
+        } catch (WebClientResponseException ex) {
+            throw new IllegalStateException(
+                    "Chargeback MIS API failed. HTTP status: "
+                            + ex.getStatusCode(), ex);
+        }
+    }
+}
+
+
+////
+
 import java.time.LocalDate;
 
 import org.springframework.stereotype.Service;
