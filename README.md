@@ -1,3 +1,33 @@
+protected byte[] postExcel(
+        String urlPath,
+        Object requestBody) {
+
+    try {
+        URI uri = URI.create(getBaseUrl() + urlPath);
+
+        return getWebClient()
+                .post()
+                .uri(uri)
+                .headers(headers ->
+                        headers.addAll(prepareHttpHeaders()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_OCTET_STREAM,
+                        MediaType.parseMediaType(
+                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .bodyValue(requestBody)
+                .retrieve()
+                .bodyToMono(byte[].class)
+                .block();
+
+    } catch (RuntimeException e) {
+        logger.error("Error downloading MIS Excel: {}",
+                e.getMessage(), e);
+        throw e;
+    }
+}
+
+//////
+
 @Service
 @RequiredArgsConstructor
 public class ChargebackService {
